@@ -1,61 +1,82 @@
-# Antigravity Account Manager
+# Antigravity Account Manager for OpenCode
 
-TUI Dashboard for managing OpenCode Antigravity Auth accounts. View status, import/export, and bulk enable/disable accounts without leaving your terminal.
+Desktop app + TUI tools to manage OpenCode Antigravity Auth accounts. Includes bulk enable/disable, import/export, rate limit status, and Antigravity Manager compatibility.
 
-## Features
+## Highlights
 
-- **TUI Dashboard** - Visual interface in terminal
-- **Multi-Select Mode** - Bulk enable/disable accounts like Antigravity Manager
-- **Import from AM** - Import accounts from Antigravity Manager (`~/.antigravity_tools/`)
-- **Import from File** - Import from JSON export files
-- **Export** - Backup accounts to portable JSON
-- **Rate Limit Status** - See which accounts are limited and when they reset
+- **Desktop App (Tauri)** with mouse-first UI
+- **Light / Dark / Auto** theme
+- **Bilingual UI** (Vietnamese + English)
+- **System Tray** enabled by default (user can turn off)
+- **Bulk actions**: enable/disable multiple accounts
+- **Import** from AM folder, plugin file, or portable export
+- **Export** to portable JSON
 
-## Install
+---
+
+## Desktop App (Recommended)
+
+### Prerequisites
+- Node.js 18+
+- Rust (already installed on your machine)
+- Windows: WebView2 Runtime (usually pre-installed)
+
+### Run in dev mode
 
 ```bash
-git clone https://github.com/d-init-d/opencode-account-sync.git
-cd opencode-account-sync
+cd desktop
 npm install
-npm run build
+npm run tauri dev
 ```
 
-## Usage
-
-### TUI Dashboard
+### Build installer
 
 ```bash
+cd desktop
+npm run tauri build
+```
+
+### Desktop UI Features
+- Clickable table with checkboxes
+- Bulk enable/disable with confirm dialog
+- Search and status filters
+- Import/Export dialogs
+- Settings: theme, language, system tray
+
+---
+
+## TUI Dashboard (Legacy)
+
+```bash
+npm install
+npm run build
 node dist/cli.js
-# or
-npm run dashboard
 ```
 
 ### Normal Mode Keys
-
 | Key | Action |
 |-----|--------|
 | `R` | Refresh account list |
 | `E` | Export accounts to JSON |
 | `I` | Import from file (shows CLI hint) |
 | `A` | Import from Antigravity Manager |
-| `S` | **Enter Select Mode** |
+| `S` | Enter Select Mode |
 | `Q` | Quit |
 
-### Select Mode Keys (for bulk operations)
-
-Press `S` to enter Select Mode, then:
-
+### Select Mode Keys
 | Key | Action |
 |-----|--------|
 | `↑` `↓` | Navigate up/down |
 | `SPACE` | Toggle checkbox for current account |
 | `A` | Select all accounts |
 | `N` | Deselect all accounts |
-| `E` | **Enable** all selected accounts |
-| `D` | **Disable** all selected accounts |
+| `E` | Enable selected accounts |
+| `D` | Disable selected accounts |
 | `S` / `ESC` | Exit Select Mode |
 
-### CLI Commands
+---
+
+## CLI Commands
 
 ```bash
 # Show dashboard (default)
@@ -79,6 +100,8 @@ node dist/cli.js import-am
 node dist/cli.js import ./backup.json --mode replace
 ```
 
+---
+
 ## Supported Import Formats
 
 | Format | Description |
@@ -86,6 +109,8 @@ node dist/cli.js import ./backup.json --mode replace
 | **AM Folder** | `~/.antigravity_tools/` - Reads `accounts.json` + detail files |
 | **Plugin File** | `antigravity-accounts.json` from OpenCode plugin |
 | **Portable Export** | JSON exported by this tool |
+
+---
 
 ## File Locations
 
@@ -95,36 +120,34 @@ node dist/cli.js import ./backup.json --mode replace
 | AM accounts | `~/.antigravity_tools/` |
 | Backups | Current directory (`antigravity-export-*.json`) |
 
-**Note:** Plugin uses `~/.config/opencode/` on ALL platforms (including Windows).
+**Note:** OpenCode plugin uses `~/.config/opencode/` on ALL platforms (including Windows).
 
-## Account States
+---
 
-| Status | Icon | Description |
-|--------|------|-------------|
-| Available | `● AVAILABLE` | Ready to use |
-| Limited | `○ LIMITED` | Rate limited, shows reset time |
-| Disabled | `x DISABLED` | Manually disabled, won't be used |
+## OpenCode Plugin (Optional)
 
-## OpenCode Plugin
-
-This repo also includes an OpenCode plugin for managing accounts directly in chat:
+This repo includes an OpenCode plugin for managing accounts directly in chat:
 
 ```bash
 # Copy plugin to OpenCode
 cp plugin/antigravity-sync.ts ~/.config/opencode/plugins/
 ```
 
-Plugin provides these tools callable by AI:
+Tools:
 - `account-list` - List accounts with status
 - `account-status` - Summary statistics
 - `account-export` - Export to JSON
 - `account-import` - Import from JSON
+
+---
 
 ## Security Notes
 
 - Export files contain refresh tokens - treat as sensitive
 - Never commit export files to version control
 - AM import is read-only (does not modify AM data)
+
+---
 
 ## License
 
