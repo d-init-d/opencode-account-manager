@@ -6,6 +6,8 @@ import { Account } from "../../core/types";
 interface AccountRowProps {
   account: Account;
   isSelected?: boolean;
+  isChecked?: boolean;
+  showCheckbox?: boolean;
 }
 
 function formatDuration(ms: number): string {
@@ -19,9 +21,12 @@ function formatDuration(ms: number): string {
 }
 
 function getAccountStatus(account: Account): {
-  status: "available" | "limited";
+  status: "available" | "limited" | "disabled";
   resetIn: string;
 } {
+  if (account.enabled === false) {
+    return { status: "disabled", resetIn: "-" };
+  }
   const resets = account.rateLimitResetTimes || {};
   const now = Date.now();
   const future = Object.values(resets).filter((v) => v > now);
@@ -35,18 +40,34 @@ function getAccountStatus(account: Account): {
   };
 }
 
-export function AccountRow({ account, isSelected }: AccountRowProps) {
+export function AccountRow({ account, isSelected, isChecked, showCheckbox }: AccountRowProps) {
   const { status, resetIn } = getAccountStatus(account);
   const project = account.projectId || account.managedProjectId || "-";
-  const bgColor = isSelected ? "blue" : undefined;
+
+  const checkbox = showCheckbox 
+    ? (isChecked ? "[x]" : "[ ]") 
+    : "";
+  
+  const cursor = isSelected ? ">" : " ";
+  const emailColor = status === "disabled" ? "gray" : (isSelected ? "white" : "cyan");
 
   return (
     <Box flexDirection="row" paddingX={1}>
-      <Box width={30}>
-        <Text color={isSelected ? "white" : "cyan"}>{account.email}</Text>
+      <Box width={2}>
+        <Text color={isSelected ? "yellow" : "white"}>{cursor}</Text>
       </Box>
-      <Box width={20}>
-        <Text dimColor>{project.slice(0, 18)}</Text>
+      {showCheckbox && (
+        <Box width={4}>
+          <Text color={isChecked ? "green" : "gray"}>{checkbox}</Text>
+        </Box>
+      )}
+      <Box width={28}>
+        <Text color={emailColor} strikethrough={status === "disabled"}>
+          {account.email}
+        </Text>
+      </Box>
+      <Box width={18}>
+        <Text dimColor>{project.slice(0, 16)}</Text>
       </Box>
       <Box width={12}>
         <StatusBadge status={status} />
@@ -61,16 +82,31 @@ export function AccountRow({ account, isSelected }: AccountRowProps) {
 interface AccountListProps {
   accounts: Account[];
   selectedIndex?: number;
+  checkedEmails?: Set<string>;
+  showCheckbox?: boolean;
 }
 
-export function AccountList({ accounts, selectedIndex = -1 }: AccountListProps) {
+export function AccountList({ 
+  accounts, 
+  selectedIndex = -1, 
+  checkedEmails = new Set(),
+  showCheckbox = false 
+}: AccountListProps) {
   return (
     <Box flexDirection="column">
       <Box flexDirection="row" paddingX={1} marginBottom={1}>
-        <Box width={30}>
+        <Box width={2}>
+          <Text dimColor> </Text>
+        </Box>
+        {showCheckbox && (
+          <Box width={4}>
+            <Text bold dimColor>SEL</Text>
+          </Box>
+        )}
+        <Box width={28}>
           <Text bold dimColor>EMAIL</Text>
         </Box>
-        <Box width={20}>
+        <Box width={18}>
           <Text bold dimColor>PROJECT</Text>
         </Box>
         <Box width={12}>
@@ -85,6 +121,8 @@ export function AccountList({ accounts, selectedIndex = -1 }: AccountListProps) 
           key={account.email}
           account={account}
           isSelected={index === selectedIndex}
+          isChecked={checkedEmails.has(account.email)}
+          showCheckbox={showCheckbox}
         />
       ))}
       {accounts.length === 0 && (

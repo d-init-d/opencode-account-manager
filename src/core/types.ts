@@ -26,6 +26,7 @@ export interface Account {
   rateLimitResetTimes?: RateLimitResetTimes;
   fingerprint?: AccountFingerprint;
   fingerprintHistory?: FingerprintHistoryEntry[];
+  enabled?: boolean;
 }
 
 export interface PluginAccountsFile {

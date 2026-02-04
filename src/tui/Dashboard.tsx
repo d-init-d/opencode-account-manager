@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Box, Text, useApp } from "ink";
+import { Box, Text, useApp, useInput } from "ink";
 import {
   Header,
   StatsRow,
@@ -40,6 +40,11 @@ export function Dashboard({ pluginPath }: DashboardProps) {
   const [summary, setSummary] = useState({ total: 0, available: 0, limited: 0 });
   const [message, setMessage] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<string>("-");
+  
+  // Selection state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [checkedEmails, setCheckedEmails] = useState<Set<string>>(new Set());
 
   const showMessage = (msg: string, duration = 3000) => {
     setMessage(msg);
@@ -51,12 +56,41 @@ export function Dashboard({ pluginPath }: DashboardProps) {
     setAccounts(file.accounts);
     setSummary(summarizeAccounts(file.accounts));
     setLastRefresh(new Date().toLocaleTimeString());
+    setCheckedEmails(new Set());
+    setSelectedIndex(0);
     showMessage("Refreshed", 2000);
   };
 
   useEffect(() => {
     loadAccounts();
   }, []);
+
+  // Keyboard navigation in select mode
+  useInput((input, key) => {
+    if (!selectMode) return;
+
+    if (key.upArrow) {
+      setSelectedIndex(prev => Math.max(0, prev - 1));
+    }
+    if (key.downArrow) {
+      setSelectedIndex(prev => Math.min(accounts.length - 1, prev + 1));
+    }
+    if (input === " ") {
+      // Toggle current selection
+      const email = accounts[selectedIndex]?.email;
+      if (email) {
+        setCheckedEmails(prev => {
+          const next = new Set(prev);
+          if (next.has(email)) {
+            next.delete(email);
+          } else {
+            next.add(email);
+          }
+          return next;
+        });
+      }
+    }
+  });
 
   const handleExport = () => {
     const exportFile = buildPortableExport(accounts);
@@ -79,7 +113,6 @@ export function Dashboard({ pluginPath }: DashboardProps) {
       return;
     }
 
-    // Merge with existing
     const existingFile = safeReadPluginFile(resolvedPath);
     const merged = mergeAccounts(existingFile, result.accounts, "merge");
     writePluginAccountsFile(pluginPath, merged);
@@ -90,8 +123,61 @@ export function Dashboard({ pluginPath }: DashboardProps) {
       5000
     );
 
-    // Reload
     loadAccounts();
+  };
+
+  const handleEnableSelected = () => {
+    if (checkedEmails.size === 0) {
+      showMessage("No accounts selected", 2000);
+      return;
+    }
+
+    const file = safeReadPluginFile(resolvedPath);
+    let count = 0;
+    
+    file.accounts = file.accounts.map(acc => {
+      if (checkedEmails.has(acc.email)) {
+        count++;
+        return { ...acc, enabled: true };
+      }
+      return acc;
+    });
+
+    writePluginAccountsFile(pluginPath, file);
+    showMessage(`Enabled ${count} accounts`, 3000);
+    loadAccounts();
+    setSelectMode(false);
+  };
+
+  const handleDisableSelected = () => {
+    if (checkedEmails.size === 0) {
+      showMessage("No accounts selected", 2000);
+      return;
+    }
+
+    const file = safeReadPluginFile(resolvedPath);
+    let count = 0;
+    
+    file.accounts = file.accounts.map(acc => {
+      if (checkedEmails.has(acc.email)) {
+        count++;
+        return { ...acc, enabled: false };
+      }
+      return acc;
+    });
+
+    writePluginAccountsFile(pluginPath, file);
+    showMessage(`Disabled ${count} accounts`, 3000);
+    loadAccounts();
+    setSelectMode(false);
+  };
+
+  const handleSelectAll = () => {
+    setCheckedEmails(new Set(accounts.map(a => a.email)));
+  };
+
+  const handleSelectNone = () => {
+    setCheckedEmails(new Set());
   };
 
   const handleAction = (action: MenuAction) => {
@@ -103,16 +189,36 @@ export function Dashboard({ pluginPath }: DashboardProps) {
         handleExport();
         break;
       case "import-file":
-        showMessage("Use CLI: antigravity-sync import --file <path>", 4000);
+        showMessage("Use CLI: antigravity-sync import <file>", 4000);
         break;
       case "import-am":
         handleImportAM();
+        break;
+      case "toggle-select-mode":
+        setSelectMode(prev => !prev);
+        setCheckedEmails(new Set());
+        setSelectedIndex(0);
+        break;
+      case "select-all":
+        handleSelectAll();
+        break;
+      case "select-none":
+        handleSelectNone();
+        break;
+      case "enable-selected":
+        handleEnableSelected();
+        break;
+      case "disable-selected":
+        handleDisableSelected();
         break;
       case "quit":
         exit();
         break;
     }
   };
+
+  // Count disabled accounts
+  const disabledCount = accounts.filter(a => a.enabled === false).length;
 
   return (
     <Box flexDirection="column" padding={1}>
@@ -123,7 +229,7 @@ export function Dashboard({ pluginPath }: DashboardProps) {
           { label: "Total", value: summary.total, color: "white" },
           { label: "Available", value: summary.available, color: "green" },
           { label: "Limited", value: summary.limited, color: "yellow" },
-          { label: "Last Refresh", value: lastRefresh, color: "gray" },
+          { label: "Disabled", value: disabledCount, color: "gray" },
         ]}
       />
 
@@ -134,14 +240,23 @@ export function Dashboard({ pluginPath }: DashboardProps) {
       <Box
         flexDirection="column"
         borderStyle="round"
-        borderColor="gray"
+        borderColor={selectMode ? "yellow" : "gray"}
         paddingY={1}
       >
-        <AccountList accounts={accounts} />
+        <AccountList 
+          accounts={accounts} 
+          selectedIndex={selectMode ? selectedIndex : -1}
+          checkedEmails={checkedEmails}
+          showCheckbox={selectMode}
+        />
       </Box>
 
       <Box marginTop={1}>
-        <MenuBar onSelect={handleAction} />
+        <MenuBar 
+          onSelect={handleAction} 
+          selectMode={selectMode}
+          selectedCount={checkedEmails.size}
+        />
       </Box>
 
       {message && (
