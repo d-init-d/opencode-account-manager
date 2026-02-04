@@ -62,6 +62,6 @@
 ---
 
 ## Phase 5 - Docs & Release
-- [ ] Update README with Desktop App instructions
-- [ ] Add run/build steps for desktop
-- [ ] Push changes to GitHub
+- [x] Update README with Desktop App instructions
+- [x] Add run/build steps for desktop
+- [x] Push changes to GitHub
