@@ -12,9 +12,9 @@ import {
   summarizeAccounts,
   writePluginAccountsFile,
 } from "./core/accounts";
-import { getAmDbPath, getPluginAccountsPath } from "./core/paths";
-import { inspectAmDatabase, importFromAmDatabase } from "./core/importers/amSqlite";
-import { readJsonFile, writeJsonFile } from "./core/utils";
+import { getPluginAccountsPath, getAmFolderPath } from "./core/paths";
+import { importFromAmFolder, isAmFolder } from "./core/importers/amJson";
+import { writeJsonFile } from "./core/utils";
 import { startTuiDashboard } from "./tui";
 
 function formatTimestamp(timestamp?: number): string {
@@ -40,8 +40,19 @@ const program = new Command();
 
 program
   .name("antigravity-sync")
-  .description("Antigravity Sync - TUI dashboard and account manager")
-  .version("0.1.0");
+  .description("Antigravity Account Manager - TUI dashboard and CLI")
+  .version("0.2.0");
+
+// Default command - show dashboard
+program
+  .command("dashboard", { isDefault: true })
+  .description("Start the TUI dashboard (default)")
+  .option("--plugin-path <path>", "Path to plugin accounts file")
+  .action((options) => {
+    startTuiDashboard({
+      pluginPath: options.pluginPath,
+    });
+  });
 
 program
   .command("list")
@@ -49,116 +60,148 @@ program
   .option("--plugin-path <path>", "Path to plugin accounts file")
   .action((options) => {
     const pluginPath = getPluginAccountsPath(options.pluginPath);
-    const file = readPluginAccountsFile(pluginPath);
+    const file = safeReadPluginFile(pluginPath);
     const summary = summarizeAccounts(file.accounts);
 
-    console.log(`Plugin accounts: ${summary.total}`);
-    console.log(`Available: ${summary.available}`);
-    console.log(`Limited: ${summary.limited}`);
-    console.log("");
+    console.log(chalk.bold("=== Account List ===\n"));
+    console.log(`Total: ${summary.total} | Available: ${chalk.green(summary.available)} | Limited: ${chalk.yellow(summary.limited)}\n`);
 
     for (const account of file.accounts) {
       const limited = isLimited(account.rateLimitResetTimes);
-      const status = limited ? chalk.yellow("limited") : chalk.green("available");
-      const lastUsed = formatTimestamp(account.lastUsed);
-      const projectId = account.projectId ? ` | ${account.projectId}` : "";
-      console.log(`${status}  ${account.email}${projectId}  lastUsed=${lastUsed}`);
+      const status = limited ? chalk.yellow("[LIMITED]") : chalk.green("[  OK  ]");
+      console.log(`${status} ${account.email}`);
+      
+      if (limited && account.rateLimitResetTimes) {
+        const now = Date.now();
+        for (const [model, resetTime] of Object.entries(account.rateLimitResetTimes)) {
+          if (resetTime > now) {
+            const hours = ((resetTime - now) / 3600000).toFixed(1);
+            console.log(chalk.gray(`          └─ ${model}: ${hours}h`));
+          }
+        }
+      }
     }
   });
 
 program
   .command("export")
-  .description("Export plugin accounts to a portable file")
+  .description("Export accounts to a portable JSON file")
   .option("--plugin-path <path>", "Path to plugin accounts file")
-  .option(
-    "--out <path>",
-    "Output file path",
-    path.resolve(process.cwd(), "antigravity-accounts.export.json")
-  )
+  .option("-o, --out <path>", "Output file path", `antigravity-export-${Date.now()}.json`)
   .action((options) => {
     const pluginPath = getPluginAccountsPath(options.pluginPath);
-    const file = readPluginAccountsFile(pluginPath);
+    const file = safeReadPluginFile(pluginPath);
+    
+    if (file.accounts.length === 0) {
+      console.log(chalk.yellow("No accounts to export."));
+      return;
+    }
+
     const exportFile = buildPortableExport(file.accounts);
     writeJsonFile(options.out, exportFile);
-    console.log(`Exported ${file.accounts.length} accounts to ${options.out}`);
+    console.log(chalk.green(`Exported ${file.accounts.length} accounts to ${options.out}`));
   });
 
 program
   .command("import")
-  .description("Import accounts into plugin file")
-  .requiredOption("--file <path>", "Import file path")
+  .description("Import accounts from file or AM folder")
+  .argument("<source>", "Path to JSON file or AM folder (~/.antigravity_tools)")
   .option("--plugin-path <path>", "Path to plugin accounts file")
-  .option("--mode <merge|replace>", "Merge mode", "merge")
-  .option("--format <portable|plugin|auto>", "Import format", "auto")
-  .action((options) => {
+  .option("-m, --mode <merge|replace>", "Import mode", "merge")
+  .action((source, options) => {
     const pluginPath = getPluginAccountsPath(options.pluginPath);
-    const raw = fs.readFileSync(options.file, "utf8");
-    const data = JSON.parse(raw) as unknown;
-    const format =
-      options.format === "portable" || options.format === "plugin"
-        ? options.format
-        : undefined;
-    const incomingAccounts = extractAccountsFromImport(data, format);
-    const existingFile = safeReadPluginFile(pluginPath);
     const mode = options.mode === "replace" ? "replace" : "merge";
-    const merged = mergeAccounts(existingFile, incomingAccounts, mode);
-    writePluginAccountsFile(pluginPath, merged);
-    console.log(
-      `Imported ${incomingAccounts.length} accounts. Total=${merged.accounts.length}`
-    );
-  });
+    const existingFile = safeReadPluginFile(pluginPath);
+    const beforeCount = existingFile.accounts.length;
 
-program
-  .command("am:inspect")
-  .description("Inspect Antigravity Manager database")
-  .option("--db <path>", "Path to accounts.db", getAmDbPath())
-  .action((options) => {
-    const info = inspectAmDatabase(options.db);
-    for (const table of info.tables) {
-      console.log(`${table.name}: ${table.columns.join(", ")}`);
+    let incomingAccounts: any[] = [];
+    let sourceType = "";
+
+    // Check if source is AM folder
+    if (fs.existsSync(source) && fs.statSync(source).isDirectory()) {
+      if (isAmFolder(source)) {
+        sourceType = "AM folder";
+        const result = importFromAmFolder(source);
+        
+        if (result.errors.length > 0) {
+          console.log(chalk.red(`Error: ${result.errors.join(", ")}`));
+          return;
+        }
+        
+        incomingAccounts = result.accounts;
+        
+        if (result.skipped.length > 0) {
+          console.log(chalk.gray(`Skipped: ${result.skipped.length} accounts`));
+        }
+      } else {
+        console.log(chalk.red("Directory is not a valid AM folder"));
+        return;
+      }
+    } else if (fs.existsSync(source)) {
+      // It's a file
+      sourceType = "JSON file";
+      try {
+        const raw = fs.readFileSync(source, "utf8");
+        const data = JSON.parse(raw);
+        incomingAccounts = extractAccountsFromImport(data);
+      } catch (err) {
+        console.log(chalk.red(`Failed to parse file: ${err}`));
+        return;
+      }
+    } else {
+      console.log(chalk.red(`Source not found: ${source}`));
+      return;
     }
-  });
 
-program
-  .command("am:import")
-  .description("Import accounts from Antigravity Manager database")
-  .option("--db <path>", "Path to accounts.db", getAmDbPath())
-  .option("--table <name>", "Table name to import")
-  .option("--column-map <path|json>", "JSON column map overrides")
-  .option("--mode <merge|replace>", "Merge mode", "merge")
-  .option("--plugin-path <path>", "Path to plugin accounts file")
-  .action((options) => {
-    const pluginPath = getPluginAccountsPath(options.pluginPath);
-    const columnMap = options.columnMap
-      ? options.columnMap.trim().startsWith("{")
-        ? (JSON.parse(options.columnMap) as Record<string, string>)
-        : (readJsonFile<Record<string, string>>(options.columnMap) as Record<
-            string,
-            string
-          >)
-      : undefined;
-    const incomingAccounts = importFromAmDatabase({
-      dbPath: options.db,
-      table: options.table,
-      columnMap,
-    });
-    const existingFile = safeReadPluginFile(pluginPath);
-    const mode = options.mode === "replace" ? "replace" : "merge";
+    if (incomingAccounts.length === 0) {
+      console.log(chalk.yellow("No valid accounts found in source."));
+      return;
+    }
+
     const merged = mergeAccounts(existingFile, incomingAccounts, mode);
     writePluginAccountsFile(pluginPath, merged);
-    console.log(
-      `Imported ${incomingAccounts.length} accounts from AM. Total=${merged.accounts.length}`
-    );
+
+    const added = merged.accounts.length - beforeCount;
+    console.log(chalk.green(`\nImport complete!`));
+    console.log(`Source: ${sourceType}`);
+    console.log(`Mode: ${mode}`);
+    console.log(`Found: ${incomingAccounts.length} accounts`);
+    console.log(`Added: ${added} new`);
+    console.log(`Total: ${merged.accounts.length} accounts`);
   });
 
 program
-  .command("dashboard")
-  .description("Start the Antigravity Sync TUI dashboard")
+  .command("import-am")
+  .description("Import accounts from Antigravity Manager")
+  .option("--am-path <path>", "Path to AM folder", getAmFolderPath())
   .option("--plugin-path <path>", "Path to plugin accounts file")
+  .option("-m, --mode <merge|replace>", "Import mode", "merge")
   .action((options) => {
-    startTuiDashboard({
-      pluginPath: options.pluginPath,
-    });
+    const pluginPath = getPluginAccountsPath(options.pluginPath);
+    const result = importFromAmFolder(options.amPath);
+
+    if (result.errors.length > 0) {
+      console.log(chalk.red(`Error: ${result.errors.join(", ")}`));
+      return;
+    }
+
+    if (result.accounts.length === 0) {
+      console.log(chalk.yellow("No accounts found in AM."));
+      if (result.skipped.length > 0) {
+        console.log(chalk.gray(`Skipped: ${result.skipped.join(", ")}`));
+      }
+      return;
+    }
+
+    const mode = options.mode === "replace" ? "replace" : "merge";
+    const existingFile = safeReadPluginFile(pluginPath);
+    const merged = mergeAccounts(existingFile, result.accounts, mode);
+    writePluginAccountsFile(pluginPath, merged);
+
+    console.log(chalk.green(`\nImported from AM!`));
+    console.log(`Found: ${result.accounts.length} accounts`);
+    console.log(`Skipped: ${result.skipped.length}`);
+    console.log(`Total: ${merged.accounts.length} accounts`);
   });
 
 program.parse();

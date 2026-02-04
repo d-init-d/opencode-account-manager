@@ -4,7 +4,7 @@ import { Box, Text, useInput } from "ink";
 export type MenuAction =
   | "refresh"
   | "export"
-  | "import"
+  | "import-file"
   | "import-am"
   | "quit";
 
@@ -16,8 +16,8 @@ interface MenuItem {
 const MENU_ITEMS: MenuItem[] = [
   { label: "[R] Refresh", value: "refresh" },
   { label: "[E] Export", value: "export" },
-  { label: "[I] Import", value: "import" },
-  { label: "[A] Import from AM", value: "import-am" },
+  { label: "[I] Import File", value: "import-file" },
+  { label: "[A] Import AM", value: "import-am" },
   { label: "[Q] Quit", value: "quit" },
 ];
 
@@ -30,7 +30,7 @@ export function MenuBar({ onSelect }: MenuBarProps) {
     const lower = input.toLowerCase();
     if (lower === "r") onSelect("refresh");
     if (lower === "e") onSelect("export");
-    if (lower === "i") onSelect("import");
+    if (lower === "i") onSelect("import-file");
     if (lower === "a") onSelect("import-am");
     if (lower === "q" || key.escape) onSelect("quit");
   });

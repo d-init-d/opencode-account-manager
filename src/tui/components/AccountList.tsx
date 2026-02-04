@@ -41,7 +41,7 @@ export function AccountRow({ account, isSelected }: AccountRowProps) {
   const bgColor = isSelected ? "blue" : undefined;
 
   return (
-    <Box flexDirection="row" paddingX={1} backgroundColor={bgColor}>
+    <Box flexDirection="row" paddingX={1}>
       <Box width={30}>
         <Text color={isSelected ? "white" : "cyan"}>{account.email}</Text>
       </Box>

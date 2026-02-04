@@ -12,10 +12,13 @@ import {
   createEmptyPluginAccountsFile,
   summarizeAccounts,
   buildPortableExport,
+  mergeAccounts,
+  writePluginAccountsFile,
 } from "../core/accounts";
-import { getPluginAccountsPath } from "../core/paths";
+import { getPluginAccountsPath, getAmFolderPath } from "../core/paths";
 import { writeJsonFile } from "../core/utils";
 import { Account, PluginAccountsFile } from "../core/types";
+import { importFromAmFolder } from "../core/importers/amJson";
 
 interface DashboardProps {
   pluginPath?: string;
@@ -38,13 +41,17 @@ export function Dashboard({ pluginPath }: DashboardProps) {
   const [message, setMessage] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<string>("-");
 
+  const showMessage = (msg: string, duration = 3000) => {
+    setMessage(msg);
+    setTimeout(() => setMessage(null), duration);
+  };
+
   const loadAccounts = () => {
     const file = safeReadPluginFile(resolvedPath);
     setAccounts(file.accounts);
     setSummary(summarizeAccounts(file.accounts));
     setLastRefresh(new Date().toLocaleTimeString());
-    setMessage("Refreshed");
-    setTimeout(() => setMessage(null), 2000);
+    showMessage("Refreshed", 2000);
   };
 
   useEffect(() => {
@@ -55,8 +62,36 @@ export function Dashboard({ pluginPath }: DashboardProps) {
     const exportFile = buildPortableExport(accounts);
     const outPath = `antigravity-export-${Date.now()}.json`;
     writeJsonFile(outPath, exportFile);
-    setMessage(`Exported to ${outPath}`);
-    setTimeout(() => setMessage(null), 3000);
+    showMessage(`Exported ${accounts.length} accounts to ${outPath}`);
+  };
+
+  const handleImportAM = () => {
+    const amPath = getAmFolderPath();
+    const result = importFromAmFolder(amPath);
+
+    if (result.errors.length > 0) {
+      showMessage(`Error: ${result.errors[0]}`, 5000);
+      return;
+    }
+
+    if (result.accounts.length === 0) {
+      showMessage(`No accounts found in AM (${result.skipped.length} skipped)`, 4000);
+      return;
+    }
+
+    // Merge with existing
+    const existingFile = safeReadPluginFile(resolvedPath);
+    const merged = mergeAccounts(existingFile, result.accounts, "merge");
+    writePluginAccountsFile(pluginPath, merged);
+
+    const added = merged.accounts.length - existingFile.accounts.length;
+    showMessage(
+      `Imported from AM: ${result.accounts.length} found, ${added} new. Total: ${merged.accounts.length}`,
+      5000
+    );
+
+    // Reload
+    loadAccounts();
   };
 
   const handleAction = (action: MenuAction) => {
@@ -67,13 +102,11 @@ export function Dashboard({ pluginPath }: DashboardProps) {
       case "export":
         handleExport();
         break;
-      case "import":
-        setMessage("Import: Use CLI command 'antigravity-sync import --file <path>'");
-        setTimeout(() => setMessage(null), 4000);
+      case "import-file":
+        showMessage("Use CLI: antigravity-sync import --file <path>", 4000);
         break;
       case "import-am":
-        setMessage("AM Import: Use CLI command 'antigravity-sync am:import'");
-        setTimeout(() => setMessage(null), 4000);
+        handleImportAM();
         break;
       case "quit":
         exit();
@@ -113,7 +146,7 @@ export function Dashboard({ pluginPath }: DashboardProps) {
 
       {message && (
         <Box marginTop={1}>
-          <Text color="green">-> {message}</Text>
+          <Text color="green">→ {message}</Text>
         </Box>
       )}
     </Box>
