@@ -117,9 +117,8 @@ function getAMPath(): string {
 }
 
 function getPluginPath(): string {
-  if (process.platform === 'win32') {
-    return path.join(process.env.APPDATA || '', 'opencode')
-  }
+  // opencode-antigravity-auth ALWAYS uses ~/.config/opencode on ALL platforms
+  // NOT %APPDATA% on Windows!
   return path.join(os.homedir(), '.config', 'opencode')
 }
 
