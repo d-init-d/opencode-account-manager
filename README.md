@@ -1,12 +1,11 @@
 # Antigravity Account Manager
 
-TUI Dashboard for managing OpenCode Antigravity Auth accounts. View status, import/export accounts without leaving your terminal.
-
-![TUI Dashboard](https://via.placeholder.com/800x400?text=TUI+Dashboard)
+TUI Dashboard for managing OpenCode Antigravity Auth accounts. View status, import/export, and bulk enable/disable accounts without leaving your terminal.
 
 ## Features
 
 - **TUI Dashboard** - Visual interface in terminal
+- **Multi-Select Mode** - Bulk enable/disable accounts like Antigravity Manager
 - **Import from AM** - Import accounts from Antigravity Manager (`~/.antigravity_tools/`)
 - **Import from File** - Import from JSON export files
 - **Export** - Backup accounts to portable JSON
@@ -23,7 +22,7 @@ npm run build
 
 ## Usage
 
-### TUI Dashboard (Recommended)
+### TUI Dashboard
 
 ```bash
 node dist/cli.js
@@ -31,18 +30,37 @@ node dist/cli.js
 npm run dashboard
 ```
 
-**Keyboard shortcuts:**
+### Normal Mode Keys
+
 | Key | Action |
 |-----|--------|
 | `R` | Refresh account list |
 | `E` | Export accounts to JSON |
 | `I` | Import from file (shows CLI hint) |
 | `A` | Import from Antigravity Manager |
+| `S` | **Enter Select Mode** |
 | `Q` | Quit |
+
+### Select Mode Keys (for bulk operations)
+
+Press `S` to enter Select Mode, then:
+
+| Key | Action |
+|-----|--------|
+| `↑` `↓` | Navigate up/down |
+| `SPACE` | Toggle checkbox for current account |
+| `A` | Select all accounts |
+| `N` | Deselect all accounts |
+| `E` | **Enable** all selected accounts |
+| `D` | **Disable** all selected accounts |
+| `S` / `ESC` | Exit Select Mode |
 
 ### CLI Commands
 
 ```bash
+# Show dashboard (default)
+node dist/cli.js
+
 # List accounts
 node dist/cli.js list
 
@@ -78,6 +96,14 @@ node dist/cli.js import ./backup.json --mode replace
 | Backups | Current directory (`antigravity-export-*.json`) |
 
 **Note:** Plugin uses `~/.config/opencode/` on ALL platforms (including Windows).
+
+## Account States
+
+| Status | Icon | Description |
+|--------|------|-------------|
+| Available | `● AVAILABLE` | Ready to use |
+| Limited | `○ LIMITED` | Rate limited, shows reset time |
+| Disabled | `x DISABLED` | Manually disabled, won't be used |
 
 ## OpenCode Plugin
 
