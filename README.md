@@ -8,9 +8,10 @@ Sync accounts between **Antigravity Manager** (GUI tool) and **opencode-antigrav
 
 - **Auto-sync on startup** - Plugin syncs accounts when OpenCode starts
 - **Smart merge** - Only adds missing accounts, preserves existing fingerprints and rate limits
-- **Enabled/disabled sync** - When you disable an account in AM, it gets disabled in OpenCode too
 - **Strategy auto-config** - Automatically sets optimal rotation strategy based on account count
 - **Backup protection** - Creates backups before any write operation
+- **Enabled/disabled sync** - Respects disabled state from AM (invalid_grant, etc.)
+- **Slash commands** - `/sync-accounts` and `/sync-status` for quick access
 - **Two sync tools** - `sync-accounts` for manual sync, `sync-status` for comparison
 
 ---
@@ -84,6 +85,18 @@ Install the antigravity-sync plugin for OpenCode by copying the plugin file from
 
 4. Restart OpenCode for the plugin to load
 
+5. (Optional) Install slash commands for quick access:
+   ```
+   ~/.config/opencode/commands/sync-accounts.md
+   ~/.config/opencode/commands/sync-status.md
+   ```
+   
+   Download from:
+   ```
+   https://raw.githubusercontent.com/d-init-d/opencode-account-sync/main/commands/sync-accounts.md
+   https://raw.githubusercontent.com/d-init-d/opencode-account-sync/main/commands/sync-status.md
+   ```
+
 ### Verification
 
 After restart, you should see in logs:
@@ -104,30 +117,22 @@ The plugin **automatically syncs** when OpenCode starts. No action needed!
 
 ### Manual Sync
 
-Use these tools when you need to sync manually:
+**Option 1: Slash Commands (Recommended)**
+
+Type in OpenCode:
+- `/sync-accounts` - Perform full sync
+- `/sync-status` - Show comparison without changes
+
+**Option 2: Natural Language**
+
+Just ask the AI:
+- "sync my accounts"
+- "show sync status"
 
 | Tool | Description |
 |------|-------------|
 | `sync-accounts` | Perform full sync between AM and Plugin |
 | `sync-status` | Show comparison without making changes |
-
-**Example output from `sync-accounts`:**
-```
-=== Antigravity Account Sync Complete ===
-
-Accounts: 10 -> 15
-Strategy: round-robin
-
-Added (5):
-  + user1@gmail.com
-  + user2@gmail.com
-
-Disabled (1):
-  x broken.account@gmail.com
-
-Re-enabled (1):
-  o fixed.account@gmail.com
-```
 
 **Example output from `sync-status`:**
 ```
@@ -155,59 +160,44 @@ Run sync-accounts to sync.
 ### Sync Logic
 
 ```
-+---------------------------------------------------------------+
-|                        SYNC FLOW                               |
-+---------------------------------------------------------------+
-|                                                                |
-|   1. Load accounts from both sources                           |
-|      - AM: ~/.antigravity_tools/accounts.json                  |
-|      - Plugin: ~/.config/opencode/antigravity-accounts.json    |
-|                                                                |
-|   2. Merge by email                                            |
-|      - Only in AM (enabled) -> Add to Plugin                   |
-|      - Only in AM (disabled) -> Skip                           |
-|      - Only in Plugin -> Keep (don't remove)                   |
-|      - In both -> Sync enabled/disabled state                  |
-|      - proxy_disabled in AM -> Skip/Remove from Plugin         |
-|                                                                |
-|   3. Calculate strategy                                        |
-|      - 1 account -> sticky                                     |
-|      - 2-3 accounts -> hybrid                                  |
-|      - 4+ accounts -> round-robin + pid_offset                 |
-|                                                                |
-|   4. Backup & Write                                            |
-|      - Backup to ~/.antigravity-sync-backups/                  |
-|      - Write updated files                                     |
-|                                                                |
-+---------------------------------------------------------------+
+┌─────────────────────────────────────────────────────────────────┐
+│                        SYNC FLOW                                 │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   1. Load accounts from both sources                             │
+│      - AM: ~/.antigravity_tools/accounts.json                    │
+│      - Plugin: ~/.config/opencode/antigravity-accounts.json      │
+│                                                                  │
+│   2. Merge by email                                              │
+│      - Only in AM → Add to Plugin (with new fingerprint)         │
+│      - Only in Plugin → Keep (don't remove)                      │
+│      - In both → Keep Plugin version (preserve fingerprint)      │
+│      - proxy_disabled in AM → Skip/Remove from Plugin            │
+│      - disabled in AM → Sync disabled state to Plugin            │
+│                                                                  │
+│   3. Calculate strategy                                          │
+│      - 1 account → sticky                                        │
+│      - 2-3 accounts → hybrid                                     │
+│      - 4+ accounts → round-robin + pid_offset                    │
+│                                                                  │
+│   4. Backup & Write                                              │
+│      - Backup to ~/.antigravity-sync-backups/                    │
+│      - Write updated files                                       │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
 ```
-
-### Enabled/Disabled Sync
-
-When an account is disabled in AM (e.g., due to `invalid_grant`), the plugin will:
-
-1. **Detect** the disabled state from AM
-2. **Update** the `enabled: false` field in the plugin accounts
-3. **Report** it as "Disabled" in sync output
-
-When you re-enable the account in AM (e.g., by re-authenticating), the plugin will:
-
-1. **Detect** the enabled state
-2. **Update** `enabled: true` in the plugin
-3. **Report** it as "Re-enabled" in sync output
 
 ### File Locations
 
-| File | Path (All Platforms) |
-|------|---------------------|
-| AM Accounts Index | `~/.antigravity_tools/accounts.json` |
-| AM Account Details | `~/.antigravity_tools/accounts/{uuid}.json` |
-| Plugin Accounts | `~/.config/opencode/antigravity-accounts.json` |
-| Plugin Settings | `~/.config/opencode/antigravity.json` |
-| Sync Plugin | `~/.config/opencode/plugins/antigravity-sync.ts` |
-| Backups | `~/.antigravity-sync-backups/` |
-
-> **Note**: On Windows, `~` = `C:\Users\YourName`. The plugin uses `~/.config/opencode/` on **all platforms** (not `%APPDATA%`).
+| File | Windows Path | macOS/Linux Path |
+|------|--------------|------------------|
+| AM Accounts Index | `~\.antigravity_tools\accounts.json` | `~/.antigravity_tools/accounts.json` |
+| AM Account Details | `~\.antigravity_tools\accounts\{uuid}.json` | `~/.antigravity_tools/accounts/{uuid}.json` |
+| Plugin Accounts | `~\.config\opencode\antigravity-accounts.json` | `~/.config/opencode/antigravity-accounts.json` |
+| Plugin Settings | `~\.config\opencode\antigravity.json` | `~/.config/opencode/antigravity.json` |
+| Sync Plugin | `~\.config\opencode\plugins\antigravity-sync.ts` | `~/.config/opencode/plugins/antigravity-sync.ts` |
+| Slash Commands | `~\.config\opencode\commands\*.md` | `~/.config/opencode/commands/*.md` |
+| Backups | `~\.antigravity-sync-backups\` | `~/.antigravity-sync-backups/` |
 
 ---
 
@@ -248,10 +238,6 @@ This prevents rate limiting issues and maximizes quota usage.
 **Accounts not syncing**
 - Check if account is `proxy_disabled` in AM
 - Check if account is `disabled` (invalid_grant) in AM
-
-**Disabled accounts not syncing**
-- The plugin syncs the enabled/disabled state on each sync
-- Run `sync-accounts` to force a sync
 
 ### Rollback
 

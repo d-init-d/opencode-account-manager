@@ -5,7 +5,6 @@
  * - Adds missing accounts from AM to Plugin
  * - Preserves fingerprints and rate limit info
  * - Excludes proxy_disabled accounts
- * - Syncs enabled/disabled state from AM
  * - Auto-calculates optimal strategy
  */
 
@@ -76,7 +75,6 @@ interface PluginAccount {
   rateLimitResetTimes?: Record<string, number>
   fingerprint?: PluginFingerprint
   fingerprintHistory?: unknown[]
-  enabled?: boolean  // Sync enabled/disabled state from AM
 }
 
 interface PluginAccountsFile {
@@ -98,8 +96,6 @@ interface SyncChanges {
   removedFromPlugin: string[]
   updatedTokens: string[]
   skipped: string[]
-  disabledInPlugin: string[]  // Accounts disabled due to AM disabled state
-  enabledInPlugin: string[]   // Accounts re-enabled
 }
 
 interface SyncResult {
@@ -121,8 +117,9 @@ function getAMPath(): string {
 }
 
 function getPluginPath(): string {
-  // opencode-antigravity-auth ALWAYS uses ~/.config/opencode on ALL platforms
-  // NOT %APPDATA% on Windows!
+  if (process.platform === 'win32') {
+    return path.join(process.env.APPDATA || '', 'opencode')
+  }
   return path.join(os.homedir(), '.config', 'opencode')
 }
 
@@ -312,9 +309,7 @@ function mergeAccounts(
     addedToPlugin: [],
     removedFromPlugin: [],
     updatedTokens: [],
-    skipped: [],
-    disabledInPlugin: [],
-    enabledInPlugin: []
+    skipped: []
   }
   
   const pluginByEmail = new Map(pluginFile.accounts.map(a => [a.email, a]))
@@ -335,63 +330,48 @@ function mergeAccounts(
       continue
     }
     
+    // Skip if account is disabled in AM (invalid_grant, etc.)
+    if (amDetail?.disabled) {
+      changes.skipped.push(entry.email)
+      continue
+    }
+    
     if (!amDetail || !amDetail.token?.refresh_token) {
       changes.skipped.push(entry.email)
       continue
     }
     
-    // Determine if account should be enabled
-    const shouldBeEnabled = !amDetail.disabled
-    
     if (pluginAcc) {
-      // Account exists in both - check if token or enabled state needs update
+      // Account exists in both - check if token needs update
       const amToken = amDetail.token.refresh_token
       const amLastUsed = amDetail.last_used || 0
       const pluginLastUsed = pluginAcc.lastUsed || 0
-      const currentlyEnabled = pluginAcc.enabled !== false  // Default to true if undefined
       
-      let updatedAcc = { ...pluginAcc }
-      let changed = false
-      
-      // Check token update
       if (amToken !== pluginAcc.refreshToken && amLastUsed > pluginLastUsed) {
-        updatedAcc.refreshToken = amToken
-        updatedAcc.lastUsed = Date.now()
+        // AM has newer token
+        resultAccounts.push({
+          ...pluginAcc,
+          refreshToken: amToken,
+          lastUsed: Date.now()
+        })
         changes.updatedTokens.push(entry.email)
-        changed = true
+      } else {
+        // Keep plugin version
+        resultAccounts.push(pluginAcc)
       }
-      
-      // Check enabled state sync
-      if (shouldBeEnabled !== currentlyEnabled) {
-        updatedAcc.enabled = shouldBeEnabled
-        if (shouldBeEnabled) {
-          changes.enabledInPlugin.push(entry.email)
-        } else {
-          changes.disabledInPlugin.push(entry.email)
-        }
-        changed = true
-      }
-      
-      resultAccounts.push(changed ? updatedAcc : pluginAcc)
       pluginByEmail.delete(entry.email)
     } else {
-      // Account only in AM - add to plugin (only if not disabled)
-      if (shouldBeEnabled) {
-        resultAccounts.push({
-          email: entry.email,
-          refreshToken: amDetail.token.refresh_token,
-          projectId: amDetail.token.project_id,
-          managedProjectId: amDetail.token.project_id,
-          addedAt: Date.now(),
-          lastUsed: Date.now(),
-          fingerprint: generateFingerprint(),
-          enabled: true
-        })
-        changes.addedToPlugin.push(entry.email)
-      } else {
-        // Skip disabled accounts that aren't in plugin yet
-        changes.skipped.push(entry.email)
-      }
+      // Account only in AM - add to plugin
+      resultAccounts.push({
+        email: entry.email,
+        refreshToken: amDetail.token.refresh_token,
+        projectId: amDetail.token.project_id,
+        managedProjectId: amDetail.token.project_id,
+        addedAt: Date.now(),
+        lastUsed: Date.now(),
+        fingerprint: generateFingerprint()
+      })
+      changes.addedToPlugin.push(entry.email)
     }
   }
   
@@ -475,9 +455,7 @@ async function executeSync(): Promise<SyncResult> {
         addedToPlugin: [],
         removedFromPlugin: [],
         updatedTokens: [],
-        skipped: [],
-        disabledInPlugin: [],
-        enabledInPlugin: []
+        skipped: []
       },
       errors: [error instanceof Error ? error.message : String(error)]
     }
@@ -512,16 +490,6 @@ function formatSyncResult(result: SyncResult): string {
     result.changes.removedFromPlugin.forEach(e => lines.push(`  - ${e}`))
   }
   
-  if (result.changes.disabledInPlugin.length > 0) {
-    lines.push(`Disabled (${result.changes.disabledInPlugin.length}):`)
-    result.changes.disabledInPlugin.forEach(e => lines.push(`  x ${e}`))
-  }
-  
-  if (result.changes.enabledInPlugin.length > 0) {
-    lines.push(`Re-enabled (${result.changes.enabledInPlugin.length}):`)
-    result.changes.enabledInPlugin.forEach(e => lines.push(`  o ${e}`))
-  }
-  
   if (result.changes.skipped.length > 0) {
     lines.push(`Skipped (${result.changes.skipped.length}):`)
     result.changes.skipped.forEach(e => lines.push(`  . ${e}`))
@@ -529,9 +497,7 @@ function formatSyncResult(result: SyncResult): string {
   
   if (result.changes.addedToPlugin.length === 0 && 
       result.changes.updatedTokens.length === 0 && 
-      result.changes.removedFromPlugin.length === 0 &&
-      result.changes.disabledInPlugin.length === 0 &&
-      result.changes.enabledInPlugin.length === 0) {
+      result.changes.removedFromPlugin.length === 0) {
     lines.push('No changes needed - accounts already in sync!')
   }
   
@@ -552,15 +518,7 @@ export const AntigravitySyncPlugin: Plugin = async (ctx) => {
     if (result.success) {
       const added = result.changes.addedToPlugin.length
       const updated = result.changes.updatedTokens.length
-      const disabled = result.changes.disabledInPlugin.length
-      const enabled = result.changes.enabledInPlugin.length
-      const parts = []
-      if (added > 0) parts.push(`${added} added`)
-      if (updated > 0) parts.push(`${updated} updated`)
-      if (disabled > 0) parts.push(`${disabled} disabled`)
-      if (enabled > 0) parts.push(`${enabled} enabled`)
-      const changesStr = parts.length > 0 ? parts.join(', ') : 'no changes'
-      console.log(`[antigravity-sync] Sync complete. ${changesStr}. Total: ${result.pluginAccountsAfter} accounts.`)
+      console.log(`[antigravity-sync] Sync complete. ${added} added, ${updated} updated. Total: ${result.pluginAccountsAfter} accounts.`)
     } else {
       console.error(`[antigravity-sync] Sync failed: ${result.errors.join(', ')}`)
     }
