@@ -1,266 +1,219 @@
 # OpenCode Account Manager (OCAM)
 
-TUI Dashboard để quản lý tất cả providers, MCP servers, và plugin accounts của [OpenCode](https://opencode.ai).
+[![npm version](https://img.shields.io/npm/v/opencode-account-manager.svg)](https://www.npmjs.com/package/opencode-account-manager)
+[![npm downloads](https://img.shields.io/npm/dw/opencode-account-manager.svg)](https://www.npmjs.com/package/opencode-account-manager)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/d-init-d/opencode-account-manager/blob/main/LICENSE)
 
-## Tính năng
-
-### Dashboard
-- **Providers**: Xem tất cả AI providers (Google, Ollama, Claudible, Antigravity Manager) với số models
-- **MCP Servers**: Xem trạng thái enabled/disabled của các MCP servers
-- **Plugin Accounts**: Quản lý accounts của Antigravity Auth plugin
-  - Xem rate limit status theo từng model (claude, gemini)
-  - Enable/Disable accounts
-  - Xóa accounts
-
-### Export/Import (v0.4.0)
-- **Encrypted Export (.ocam)**: Mã hóa AES-256-GCM với password
-- **Plain JSON Export**: Format không mã hóa (backward compatible)
-- **File Browser**: Chọn nhanh Desktop/Documents, duyệt folder, paste path
-- **Import Preview**: Xem accounts nào đã tồn tại trước khi import
-- **Overwrite Mode**: Accounts trùng sẽ được cập nhật khi import
+TUI Dashboard to manage all providers, MCP servers, and plugin accounts for [OpenCode](https://opencode.ai).
 
 ---
 
-## Cài đặt
+## Features
 
-### Cách 1: Clone từ GitHub (Recommended)
+- **Providers View**: See all AI providers (Google, Ollama, Antigravity) with model counts
+- **MCP Servers**: View enabled/disabled status of MCP servers
+- **Plugin Accounts**: Manage Antigravity Auth plugin accounts
+  - Rate limit status per model (claude, gemini)
+  - Enable/Disable/Delete accounts
+- **Encrypted Export**: AES-256-GCM encryption with password protection
+- **Multi-format Import**: Support for encrypted `.ocam`, plain JSON, and Antigravity Manager exports
 
-```bash
-# Clone repo
-git clone https://github.com/d-init-d/opencode-account-manager.git
-cd opencode-account-manager
+---
 
-# Cài dependencies
-npm install
+## Installation
 
-# Build TypeScript
-npm run build
+**For Humans**
 
-# (Optional) Link để dùng command `ocam` ở mọi nơi
-npm link
+**Option A: Let an LLM do it**
+
+Paste this into any LLM agent (Claude Code, OpenCode, Cursor, etc.):
+
+```
+Install opencode-account-manager globally via npm, then run "ocam" to verify installation.
+Repository: https://github.com/d-init-d/opencode-account-manager
 ```
 
-### Cách 2: Cài trực tiếp từ GitHub
+**Option B: Install from npm**
+
+```bash
+npm install -g opencode-account-manager
+```
+
+**Option C: Install from GitHub**
 
 ```bash
 npm install -g github:d-init-d/opencode-account-manager
 ```
 
-### Kiểm tra cài đặt
+**Verify installation:**
 
 ```bash
-# Nếu đã npm link hoặc cài global
 ocam --version
-
-# Hoặc chạy trực tiếp
-node dist/cli.js --version
 ```
 
 ---
 
-## Sử dụng
+**For LLM Agents**
 
-### Mở Dashboard (TUI)
+### Step-by-Step Instructions
+
+1. Run `npm install -g opencode-account-manager` to install globally
+2. Run `ocam` to start the TUI dashboard
+3. The dashboard will auto-detect OpenCode config at `~/.config/opencode/opencode.json`
+
+### Verification
 
 ```bash
-# Cách 1: Command ngắn (nếu đã npm link)
+ocam --version
+# Expected output: 0.4.2
+```
+
+---
+
+## Usage
+
+### Start Dashboard
+
+```bash
 ocam
-
-# Cách 2: Command đầy đủ
+# or
 opencode-account-manager
-
-# Cách 3: Từ thư mục project
-npm run dashboard
-
-# Cách 4: Chạy trực tiếp
-node dist/cli.js dashboard
 ```
 
 ### CLI Commands
 
 ```bash
-# Xem danh sách accounts
+# List accounts
 ocam list
 
-# Export accounts ra file JSON
+# Export accounts
 ocam export -o backup.json
 
-# Import accounts từ file
+# Import accounts
 ocam import backup.json
 
-# Import từ Antigravity Manager folder
+# Import from Antigravity Manager folder
 ocam import-am
 
-# Xem help
+# Help
 ocam --help
 ```
 
 ---
 
-## Phím tắt trong Dashboard
+## Keyboard Shortcuts
 
 ### Main Dashboard
 
-| Phím | Chức năng |
-|------|-----------|
-| `Tab` | Chuyển section (Providers → Accounts → MCP) |
-| `R` | Refresh dữ liệu |
-| `E` | Export accounts (mở menu chọn format) |
-| `I` | Import accounts (mở file browser) |
-| `A` | Import từ Antigravity Manager folder |
-| `S` | Bật Select Mode (trong section Accounts) |
-| `Q` | Thoát |
+| Key | Action |
+|-----|--------|
+| `Tab` | Switch section (Providers → Accounts → MCP) |
+| `R` | Refresh data |
+| `E` | Export accounts |
+| `I` | Import accounts |
+| `A` | Import from Antigravity Manager |
+| `S` | Enter Select Mode |
+| `Q` | Quit |
 
-### Select Mode (trong Accounts)
+### Select Mode (Accounts)
 
-| Phím | Chức năng |
-|------|-----------|
-| `↑/↓` | Di chuyển lên/xuống |
-| `Space` | Chọn/bỏ chọn account |
-| `A` | Chọn tất cả |
-| `N` | Bỏ chọn tất cả |
-| `E` | Enable các accounts đã chọn |
-| `D` | Disable các accounts đã chọn |
-| `X` | Export các accounts đã chọn |
-| `DEL` | Xóa các accounts đã chọn |
-| `S` / `Esc` | Thoát Select Mode |
-
-### Export Flow
-
-1. Bấm `E` để export
-2. Chọn format: `[1] Encrypted (.ocam)` hoặc `[2] Plain JSON`
-3. Chọn folder lưu file
-4. Nhập password (chỉ với encrypted)
-5. Done!
-
-### Import Flow
-
-1. Bấm `I` để import
-2. Duyệt và chọn file `.ocam` hoặc `.json`
-3. Nhập password (chỉ với file encrypted)
-4. Xem preview các accounts
-5. Bấm `Enter` để confirm import
+| Key | Action |
+|-----|--------|
+| `↑/↓` | Navigate |
+| `Space` | Toggle selection |
+| `A` | Select all |
+| `N` | Deselect all |
+| `E` | Enable selected |
+| `D` | Disable selected |
+| `X` | Export selected |
+| `DEL` | Delete selected |
+| `Esc` | Exit Select Mode |
 
 ---
 
-## File Formats
+## Supported Import Formats
 
-### Encrypted (.ocam)
-- Mã hóa AES-256-GCM với scrypt key derivation
-- Cần password để mở
-- Khuyến nghị dùng khi backup hoặc share
-
-### Plain JSON (.json)
-- Human-readable, không mã hóa
-- Chứa refresh tokens dạng clear text
-- Chỉ nên dùng cho local backup
+| Format | Extension | Description |
+|--------|-----------|-------------|
+| Encrypted | `.ocam` | AES-256-GCM encrypted, password required |
+| Portable | `.json` | OpenCode Account Manager plain export |
+| AM Export | `.json` | Antigravity Manager app export `[{email, refresh_token}]` |
+| Plugin Native | `.json` | `antigravity-accounts.json` format |
 
 ---
 
-## Các file cấu hình
+## Configuration Paths
 
-| File | Vị trí | Mô tả |
-|------|--------|-------|
-| `opencode.json` | `~/.config/opencode/` | Config chính của OpenCode (providers, MCP) |
-| `antigravity-accounts.json` | `%APPDATA%/opencode/` | Accounts của plugin (Windows) |
-| `antigravity-accounts.json` | `~/.config/opencode/` | Accounts của plugin (Linux/Mac) |
-| `ocam-config.json` | `%APPDATA%/opencode/` | Preferences của app (recent folders) |
+| File | Windows | Linux/Mac |
+|------|---------|-----------|
+| OpenCode config | `~/.config/opencode/opencode.json` | `~/.config/opencode/opencode.json` |
+| Plugin accounts | `%APPDATA%/opencode/antigravity-accounts.json` | `~/.config/opencode/antigravity-accounts.json` |
+| OCAM preferences | `%APPDATA%/opencode/ocam-config.json` | `~/.config/opencode/ocam-config.json` |
+
+> **Note**: `~` on Windows resolves to your user home directory (e.g., `C:\Users\YourName`)
 
 ---
 
-## Yêu cầu hệ thống
+## Requirements
 
 - **Node.js**: >= 16.x
-- **OpenCode**: Cần cài sẵn OpenCode với Antigravity Auth plugin
-- **Terminal**: Hỗ trợ Unicode và 256 colors (Windows Terminal, iTerm2, etc.)
-
----
-
-## Screenshots
-
-```
-* OpenCode Account Manager - Dashboard
-────────────────────────────────────────────────────────────────
-Providers  Models  MCP On  MCP Off  Accounts  Available  Limited
-    4        29       6        0        5          3         2
-
-Sections: [1] Providers  [2] Accounts  [3] MCP  (Tab to switch)
-
-╭─ PROVIDERS ──────────────────────────────────────────────────╮
-│ PROVIDER            MODELS  TYPE      BASE URL              │
-│ Google              7       builtin   -                     │
-│ Ollama              5       custom    http://localhost:11434│
-│ Claudible           3       custom    https://claudible.io  │
-│ Antigravity Manager 14      custom    http://localhost:8045 │
-╰──────────────────────────────────────────────────────────────╯
-
-╭─ PLUGIN ACCOUNTS (opencode-antigravity-auth) ────────────────╮
-│ EMAIL                         STATUS     RATE LIMIT          │
-│ user1@gmail.com               enabled    claude: 2.1h        │
-│ user2@gmail.com               enabled    OK                  │
-│ user3@gmail.com               disabled   -                   │
-╰──────────────────────────────────────────────────────────────╯
-
-╭─ MCP SERVERS ────────────────────────────────────────────────╮
-│ SERVER              STATUS     ENV   COMMAND                 │
-│ playwright          enabled    0     npx @playwright/mcp     │
-│ firecrawl           enabled    1     npx firecrawl-mcp       │
-│ github              enabled    1     npx @modelcontextprot...│
-╰──────────────────────────────────────────────────────────────╯
-
-┌──────────────────────────────────────────────────────────────┐
-│ [R] Refresh  [E] Export  [I] Import  [A] AM Import  [S] Select Mode  [Q] Quit │
-└──────────────────────────────────────────────────────────────┘
-```
+- **OpenCode**: With Antigravity Auth plugin installed
+- **Terminal**: Unicode and 256 colors support (Windows Terminal, iTerm2, etc.)
 
 ---
 
 ## Troubleshooting
 
-### Lỗi "command not found: ocam"
+### "command not found: ocam"
 
 ```bash
-# Nếu chưa npm link, chạy:
-cd /path/to/opencode-account-manager
-npm link
-
-# Hoặc chạy trực tiếp:
-node /path/to/opencode-account-manager/dist/cli.js
+npm install -g opencode-account-manager
 ```
 
-### Lỗi "Cannot find module"
+### "Plugin accounts file not found"
 
-```bash
-# Rebuild project
-npm run build
-```
+Login at least one account first:
 
-### Lỗi "Plugin accounts file not found"
-
-Cần đăng nhập ít nhất 1 account trong OpenCode trước:
 ```bash
 opencode auth login
+```
+
+### "Cannot find module"
+
+Reinstall the package:
+
+```bash
+npm uninstall -g opencode-account-manager
+npm install -g opencode-account-manager
 ```
 
 ---
 
 ## Documentation
 
-- [ROADMAP.md](./docs/ROADMAP.md) - Lịch sử phiên bản và kế hoạch
-- [BLUEPRINT.md](./docs/BLUEPRINT.md) - Kiến trúc kỹ thuật
+- [ROADMAP.md](./docs/ROADMAP.md) - Version history and plans
+- [BLUEPRINT.md](./docs/BLUEPRINT.md) - Technical architecture
 
 ---
 
 ## Contributing
 
-1. Fork repo
-2. Tạo branch: `git checkout -b feature/ten-tinh-nang`
-3. Commit: `git commit -m "feat: mô tả"`
-4. Push: `git push origin feature/ten-tinh-nang`
-5. Tạo Pull Request
+1. Fork the repo
+2. Create branch: `git checkout -b feature/your-feature`
+3. Commit: `git commit -m "feat: description"`
+4. Push: `git push origin feature/your-feature`
+5. Create Pull Request
 
 ---
 
 ## License
 
-MIT
+MIT License. See [LICENSE](./LICENSE) for details.
+
+---
+
+## Credits
+
+- [opencode-antigravity-auth](https://github.com/NoeFabris/opencode-antigravity-auth) - The plugin this tool manages
+- [OpenCode](https://opencode.ai) - The AI coding assistant
+

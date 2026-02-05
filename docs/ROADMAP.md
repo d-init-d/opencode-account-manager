@@ -23,14 +23,25 @@
 - [x] Tab navigation between sections (Providers, Accounts, MCP)
 - [x] Collapsible sections
 
-### v0.4.0 - Encrypted Export/Import (Current)
-- [ ] **Encrypted Export** - AES-256-GCM with password protection
-- [ ] **Plain JSON Export** - Keep original format as option
-- [ ] **File Browser UI** - Browse folders, quick locations, paste path
-- [ ] **Import from File** - Select .ocam or .json files
-- [ ] **Password Input** - Masked input with confirmation
-- [ ] **Remember Preferences** - Last export/import folder saved
-- [ ] **Overwrite Mode** - Replace existing accounts on import
+### v0.4.0 - Encrypted Export/Import
+- [x] **Encrypted Export** - AES-256-GCM with password protection
+- [x] **Plain JSON Export** - Keep original format as option
+- [x] **File Browser UI** - Browse folders, quick locations, paste path
+- [x] **Import from File** - Select .ocam or .json files
+- [x] **Password Input** - Masked input with confirmation
+- [x] **Remember Preferences** - Last export/import folder saved
+- [x] **Overwrite Mode** - Replace existing accounts on import
+
+### v0.4.1 - npm Publish
+- [x] Published to npm registry
+- [x] Global install via `npm install -g opencode-account-manager`
+- [x] Commands: `ocam`, `opencode-account-manager`
+
+### v0.4.2 - Antigravity Manager Export Support (Current)
+- [x] **AM Export Import** - Support `[{email, refresh_token}]` format
+- [x] **Auto-detect Format** - Recognize encrypted, portable, AM export formats
+- [x] **Format Preview** - Show detected format in import preview
+- [x] **Professional README** - Updated documentation with LLM installation guide
 
 ---
 
@@ -62,8 +73,8 @@
 - [ ] Model usage statistics
 
 ### v1.0.0 - Stable Release
+- [x] npm publish
 - [ ] Full documentation
-- [ ] npm publish
 - [ ] Windows/Mac/Linux installers
 - [ ] Integration tests
 
