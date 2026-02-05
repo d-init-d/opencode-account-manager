@@ -506,11 +506,11 @@ export function Dashboard({ pluginPath }: DashboardProps) {
       </Box>
 
       {/* Loading indicator */}
-      {isLoading && loadingStep && (
+      {isLoading && loadingStep ? (
         <Box marginBottom={1} paddingX={1}>
           <Text color="cyan">⟳ {loadingStep}</Text>
         </Box>
-      )}
+      ) : null}
 
       {/* Tab content */}
       {activeTab === "dashboard" ? (
@@ -561,11 +561,11 @@ export function Dashboard({ pluginPath }: DashboardProps) {
       </Box>
 
       {/* Message */}
-      {message && (
+      {message ? (
         <Box marginTop={1}>
           <Text color="green">→ {message}</Text>
         </Box>
-      )}
+      ) : null}
 
       {/* Action Palette overlay */}
       {activeModal === "palette" && (
