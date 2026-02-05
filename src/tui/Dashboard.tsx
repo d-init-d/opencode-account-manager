@@ -97,14 +97,28 @@ export function Dashboard({ pluginPath }: DashboardProps) {
   useInput((input, key) => {
     if (activeModal !== "none") return;
 
-    // Section switching with Tab
-    if (key.tab) {
+    // Section switching with Tab or Left/Right arrows
+    if (key.tab || key.rightArrow) {
       setActiveSection(prev => {
         if (prev === "providers") return "accounts";
         if (prev === "accounts") return "mcp";
         return "providers";
       });
-      setSelectMode(false);
+      if (!key.rightArrow || activeSection !== "accounts") {
+        setSelectMode(false);
+      }
+      return;
+    }
+
+    if (key.leftArrow) {
+      setActiveSection(prev => {
+        if (prev === "mcp") return "accounts";
+        if (prev === "accounts") return "providers";
+        return "mcp";
+      });
+      if (activeSection !== "accounts") {
+        setSelectMode(false);
+      }
       return;
     }
 
@@ -124,15 +138,28 @@ export function Dashboard({ pluginPath }: DashboardProps) {
       return;
     }
 
-    // Only handle list navigation in accounts section with select mode
-    if (activeSection === "accounts" && selectMode) {
+    // Up/Down arrows for list navigation in accounts section
+    if (activeSection === "accounts") {
       if (key.upArrow) {
-        setSelectedIndex(prev => Math.max(0, prev - 1));
+        if (!selectMode) {
+          setSelectMode(true);
+          setSelectedIndex(0);
+        } else {
+          setSelectedIndex(prev => Math.max(0, prev - 1));
+        }
+        return;
       }
       if (key.downArrow) {
-        setSelectedIndex(prev => Math.min(accounts.length - 1, prev + 1));
+        if (!selectMode) {
+          setSelectMode(true);
+          setSelectedIndex(0);
+        } else {
+          setSelectedIndex(prev => Math.min(accounts.length - 1, prev + 1));
+        }
+        return;
       }
-      if (input === " ") {
+      // Space to toggle selection in select mode
+      if (selectMode && input === " ") {
         const email = accounts[selectedIndex]?.email;
         if (email) {
           setCheckedEmails(prev => {
@@ -387,7 +414,7 @@ export function Dashboard({ pluginPath }: DashboardProps) {
         <Text color={activeSection === "mcp" ? "cyan" : "gray"} bold={activeSection === "mcp"}>
           [3] MCP
         </Text>
-        <Text dimColor>  (Tab to switch)</Text>
+        <Text dimColor>  (←→ or Tab to switch, ↑↓ in Accounts)</Text>
       </Box>
 
       {/* Providers Section */}

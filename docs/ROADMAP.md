@@ -43,10 +43,16 @@
 - [x] **Format Preview** - Show detected format in import preview
 - [x] **Professional README** - Updated documentation with LLM installation guide
 
-### v0.4.3 - Keyboard Navigation Fix (Current)
+### v0.4.3 - Keyboard Navigation Fix
 - [x] **Number Keys** - Press 1/2/3 to switch sections (Providers/Accounts/MCP)
 - [x] **Tab Navigation** - Fixed Tab key to cycle through sections
 - [x] **UI Indicator** - Show `[1] Providers [2] Accounts [3] MCP` in header
+
+### v0.4.4 - Arrow Key Navigation (Current)
+- [x] **←→ Arrow Keys** - Switch between sections (Providers ↔ Accounts ↔ MCP)
+- [x] **↑↓ Arrow Keys** - Navigate account list, auto-enters select mode
+- [x] **Space Key** - Toggle selection in select mode
+- [x] **Updated Help Text** - Show arrow key hints in UI
 
 ---
 

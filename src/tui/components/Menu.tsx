@@ -82,7 +82,7 @@ export function MenuBar({ onSelect, selectMode = false, selectedCount = 0 }: Men
       {selectMode && (
         <Box marginBottom={1} paddingX={1}>
           <Text color="yellow" bold>
-            SELECT MODE - {selectedCount} selected | ↑↓ navigate | SPACE toggle | ENTER confirm
+            SELECT MODE - {selectedCount} selected | ↑↓ navigate | SPACE toggle | ←→ switch section
           </Text>
         </Box>
       )}
