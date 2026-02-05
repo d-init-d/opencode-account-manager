@@ -10,10 +10,13 @@ import {
   PortableExportFile,
   isEncryptedExportFile,
   isPortableExportFile,
+  isAMExportFile,
+  ImportFileType,
 } from "../../core/types";
 import { decrypt } from "../../core/crypto";
 import { readJsonFile } from "../../core/utils";
 import { updateLastImportFolder, getLastImportFolder } from "../../core/config-store";
+import { importFromAMExportContent, AMExportEntry } from "../../core/importers/amExport";
 
 interface ImportModalProps {
   existingAccounts: Account[];
@@ -28,10 +31,13 @@ interface ImportPreviewItem {
   exists: boolean;
 }
 
+type DetectedFormat = "encrypted" | "portable" | "am-export" | "raw-array" | "unknown";
+
 export function ImportModal({ existingAccounts, onComplete, onCancel }: ImportModalProps) {
   const [step, setStep] = useState<ImportStep>("file");
   const [selectedFile, setSelectedFile] = useState<string>("");
   const [isEncrypted, setIsEncrypted] = useState<boolean>(false);
+  const [detectedFormat, setDetectedFormat] = useState<DetectedFormat>("unknown");
   const [importedAccounts, setImportedAccounts] = useState<Account[]>([]);
   const [previewItems, setPreviewItems] = useState<ImportPreviewItem[]>([]);
   const [error, setError] = useState<string>("");
@@ -53,22 +59,60 @@ export function ImportModal({ existingAccounts, onComplete, onCancel }: ImportMo
       const data = readJsonFile(filePath);
 
       if (isEncryptedExportFile(data)) {
+        // Encrypted .ocam file
         setIsEncrypted(true);
+        setDetectedFormat("encrypted");
         setStep("password");
+      } else if (isAMExportFile(data)) {
+        // Antigravity Manager export format: [{ email, refresh_token }]
+        setIsEncrypted(false);
+        setDetectedFormat("am-export");
+        processAMExport(data);
       } else if (isPortableExportFile(data)) {
+        // opencode-account-manager plain export
         setIsEncrypted(false);
+        setDetectedFormat("portable");
         processAccounts(data.accounts);
-      } else if (Array.isArray(data)) {
-        // Raw array of accounts
+      } else if (Array.isArray(data) && data.length > 0 && data[0].email) {
+        // Raw array of accounts (legacy format)
         setIsEncrypted(false);
+        setDetectedFormat("raw-array");
         processAccounts(data);
       } else {
-        throw new Error("Unknown file format");
+        throw new Error("Unknown file format. Expected: encrypted, AM export, or portable format.");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to read file");
       setStep("error");
     }
+  };
+
+  // Process Antigravity Manager export format
+  const processAMExport = (entries: AMExportEntry[]) => {
+    const result = importFromAMExportContent(entries);
+
+    if (result.errors.length > 0) {
+      setError(result.errors.join("; "));
+      setStep("error");
+      return;
+    }
+
+    if (result.accounts.length === 0) {
+      setError(`No valid accounts found. Skipped: ${result.skipped.join(", ") || "none"}`);
+      setStep("error");
+      return;
+    }
+
+    setImportedAccounts(result.accounts);
+
+    // Build preview
+    const preview: ImportPreviewItem[] = result.accounts.map(acc => ({
+      email: acc.email,
+      exists: existsInCurrent(acc.email),
+    }));
+
+    setPreviewItems(preview);
+    setStep("preview");
   };
 
   // Handle password for encrypted files
@@ -192,7 +236,9 @@ export function ImportModal({ existingAccounts, onComplete, onCancel }: ImportMo
             <Text>
               Found {importedAccounts.length} accounts in{" "}
               <Text color="cyan">{path.basename(selectedFile)}</Text>
-              {isEncrypted && <Text color="green"> (encrypted)</Text>}
+              {detectedFormat === "encrypted" && <Text color="green"> (encrypted)</Text>}
+              {detectedFormat === "am-export" && <Text color="magenta"> (AM export)</Text>}
+              {detectedFormat === "portable" && <Text color="blue"> (portable)</Text>}
             </Text>
           </Box>
 

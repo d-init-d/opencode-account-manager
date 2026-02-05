@@ -116,3 +116,43 @@ export interface ImportResult {
   overwrittenCount: number;
   error?: string;
 }
+
+// ============================================================================
+// Antigravity Manager Export Types
+// ============================================================================
+
+/**
+ * Single entry in AM export file (from app export button)
+ * Format: [{ "email": "...", "refresh_token": "..." }, ...]
+ */
+export interface AMExportEntry {
+  email: string;
+  refresh_token: string;
+}
+
+/**
+ * Type guard to check if data is an AM export file
+ */
+export function isAMExportFile(data: unknown): data is AMExportEntry[] {
+  if (!Array.isArray(data)) return false;
+  if (data.length === 0) return true;
+  
+  const sample = data.slice(0, 3);
+  return sample.every(item => 
+    typeof item === "object" &&
+    item !== null &&
+    typeof (item as Record<string, unknown>).email === "string" &&
+    typeof (item as Record<string, unknown>).refresh_token === "string"
+  );
+}
+
+// ============================================================================
+// Import Source Detection
+// ============================================================================
+
+export type ImportFileType = 
+  | "encrypted"      // .ocam encrypted file
+  | "portable"       // opencode-account-manager plain export
+  | "am-export"      // Antigravity Manager app export
+  | "plugin-native"  // antigravity-accounts.json format
+  | "unknown";

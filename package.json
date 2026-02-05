@@ -1,6 +1,6 @@
 {
   "name": "opencode-account-manager",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "TUI Dashboard for OpenCode - View providers, MCP servers, and plugin accounts",
   "main": "dist/cli.js",
   "bin": {
