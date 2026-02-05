@@ -108,27 +108,43 @@ export function Dashboard({ pluginPath }: DashboardProps) {
       return;
     }
 
-    // Only handle list navigation in accounts section with select mode
-    if (activeSection !== "accounts" || !selectMode) return;
+    // Number keys for section switching
+    if (input === "1") {
+      setActiveSection("providers");
+      setSelectMode(false);
+      return;
+    }
+    if (input === "2") {
+      setActiveSection("accounts");
+      return;
+    }
+    if (input === "3") {
+      setActiveSection("mcp");
+      setSelectMode(false);
+      return;
+    }
 
-    if (key.upArrow) {
-      setSelectedIndex(prev => Math.max(0, prev - 1));
-    }
-    if (key.downArrow) {
-      setSelectedIndex(prev => Math.min(accounts.length - 1, prev + 1));
-    }
-    if (input === " ") {
-      const email = accounts[selectedIndex]?.email;
-      if (email) {
-        setCheckedEmails(prev => {
-          const next = new Set(prev);
-          if (next.has(email)) {
-            next.delete(email);
-          } else {
-            next.add(email);
-          }
-          return next;
-        });
+    // Only handle list navigation in accounts section with select mode
+    if (activeSection === "accounts" && selectMode) {
+      if (key.upArrow) {
+        setSelectedIndex(prev => Math.max(0, prev - 1));
+      }
+      if (key.downArrow) {
+        setSelectedIndex(prev => Math.min(accounts.length - 1, prev + 1));
+      }
+      if (input === " ") {
+        const email = accounts[selectedIndex]?.email;
+        if (email) {
+          setCheckedEmails(prev => {
+            const next = new Set(prev);
+            if (next.has(email)) {
+              next.delete(email);
+            } else {
+              next.add(email);
+            }
+            return next;
+          });
+        }
       }
     }
   });

@@ -37,11 +37,16 @@
 - [x] Global install via `npm install -g opencode-account-manager`
 - [x] Commands: `ocam`, `opencode-account-manager`
 
-### v0.4.2 - Antigravity Manager Export Support (Current)
+### v0.4.2 - Antigravity Manager Export Support
 - [x] **AM Export Import** - Support `[{email, refresh_token}]` format
 - [x] **Auto-detect Format** - Recognize encrypted, portable, AM export formats
 - [x] **Format Preview** - Show detected format in import preview
 - [x] **Professional README** - Updated documentation with LLM installation guide
+
+### v0.4.3 - Keyboard Navigation Fix (Current)
+- [x] **Number Keys** - Press 1/2/3 to switch sections (Providers/Accounts/MCP)
+- [x] **Tab Navigation** - Fixed Tab key to cycle through sections
+- [x] **UI Indicator** - Show `[1] Providers [2] Accounts [3] MCP` in header
 
 ---
 
