@@ -61,22 +61,27 @@
 - [x] **Inline Selection** - Space to toggle, selection count shown in help bar
 - [x] **Removed MenuBar** - Clean minimal interface
 
-### v0.5.1 - Dashboard Tab (Current)
+### v0.5.1 - Dashboard Tab
 - [x] **Two Tabs** - Dashboard (rate limits) + Settings (providers, accounts, MCP)
 - [x] **Tab Switching** - Press Tab to switch between Dashboard and Settings
 - [x] **Rate Limit View** - Like Antigravity Manager, shows accounts with model limits
 - [x] **Progress Bars** - Visual indicator of rate limit status per model
 - [x] **Time Remaining** - Shows hours/minutes until limit resets
 
-**New Controls:**
+### v0.5.2 - Loading Indicator (Current)
+- [x] **Loading State** - Shows progress during refresh
+- [x] **Step Messages** - "Loading OpenCode config...", "Loading accounts...", "Done!"
+- [x] **R Key Shortcut** - Added R to help bar for quick refresh
+
+**Controls:**
 | Key | Action |
 |-----|--------|
 | Tab | Switch between Dashboard and Settings |
 | ↑↓ | Navigate accounts/sections |
 | Space | Toggle account selection |
+| R | Refresh with progress indicator |
 | P | Open Action Palette |
 | Q | Quit |
-| R | Refresh |
 
 ---
 

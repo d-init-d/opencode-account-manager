@@ -69,6 +69,10 @@ export function Dashboard({ pluginPath }: DashboardProps) {
   
   // Modal state
   const [activeModal, setActiveModal] = useState<ModalType>("none");
+  
+  // Loading state
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState("");
 
   const showMessage = (msg: string, duration = 3000) => {
     setMessage(msg);
@@ -87,9 +91,22 @@ export function Dashboard({ pluginPath }: DashboardProps) {
     setCheckedEmails(new Set());
   };
 
-  const refresh = () => {
+  const refresh = async () => {
+    setIsLoading(true);
+    
+    setLoadingStep("Loading OpenCode config...");
+    await new Promise(r => setTimeout(r, 100)); // Small delay for UI update
     loadOpencodeConfig();
+    
+    setLoadingStep("Loading accounts...");
+    await new Promise(r => setTimeout(r, 100));
     loadAccounts();
+    
+    setLoadingStep("Done!");
+    await new Promise(r => setTimeout(r, 300));
+    
+    setIsLoading(false);
+    setLoadingStep("");
     showMessage("Refreshed", 2000);
   };
 
@@ -477,6 +494,8 @@ export function Dashboard({ pluginPath }: DashboardProps) {
       {/* Help bar */}
       <Box marginY={1}>
         <Text dimColor>↑↓ navigate • Space select • </Text>
+        <Text color="cyan" bold>R</Text>
+        <Text dimColor> refresh • </Text>
         <Text color="cyan" bold>P</Text>
         <Text dimColor> actions • </Text>
         <Text color="cyan" bold>Tab</Text>
@@ -485,6 +504,16 @@ export function Dashboard({ pluginPath }: DashboardProps) {
           <Text color="yellow"> • {checkedEmails.size} selected</Text>
         )}
       </Box>
+
+      {/* Loading indicator */}
+      {isLoading && (
+        <Box marginBottom={1} paddingX={1}>
+          <Text color="cyan">
+            <Text color="cyan">⟳ </Text>
+            {loadingStep}
+          </Text>
+        </Box>
+      )}
 
       {/* Tab content */}
       {activeTab === "dashboard" ? (
