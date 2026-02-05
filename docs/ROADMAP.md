@@ -54,23 +54,29 @@
 - [x] **Space Key** - Toggle selection in select mode
 - [x] **Updated Help Text** - Show arrow key hints in UI
 
-### v0.5.0 - OpenCode-style UX (Current)
+### v0.5.0 - OpenCode-style UX
 - [x] **Action Palette** - Press P to open command palette (like OpenCode Ctrl+P)
 - [x] **Unified Navigation** - ↑↓ to navigate everything, Enter to expand/select
 - [x] **Simplified Controls** - No more complex keyboard shortcuts to remember
 - [x] **Inline Selection** - Space to toggle, selection count shown in help bar
 - [x] **Removed MenuBar** - Clean minimal interface
 
+### v0.5.1 - Dashboard Tab (Current)
+- [x] **Two Tabs** - Dashboard (rate limits) + Settings (providers, accounts, MCP)
+- [x] **Tab Switching** - Press Tab to switch between Dashboard and Settings
+- [x] **Rate Limit View** - Like Antigravity Manager, shows accounts with model limits
+- [x] **Progress Bars** - Visual indicator of rate limit status per model
+- [x] **Time Remaining** - Shows hours/minutes until limit resets
+
 **New Controls:**
 | Key | Action |
 |-----|--------|
-| ↑↓ | Navigate sections and accounts |
-| Enter | Expand section / Toggle account selection |
+| Tab | Switch between Dashboard and Settings |
+| ↑↓ | Navigate accounts/sections |
 | Space | Toggle account selection |
 | P | Open Action Palette |
 | Q | Quit |
 | R | Refresh |
-| Esc | Clear selection |
 
 ---
 
