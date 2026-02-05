@@ -48,11 +48,29 @@
 - [x] **Tab Navigation** - Fixed Tab key to cycle through sections
 - [x] **UI Indicator** - Show `[1] Providers [2] Accounts [3] MCP` in header
 
-### v0.4.4 - Arrow Key Navigation (Current)
+### v0.4.4 - Arrow Key Navigation
 - [x] **←→ Arrow Keys** - Switch between sections (Providers ↔ Accounts ↔ MCP)
 - [x] **↑↓ Arrow Keys** - Navigate account list, auto-enters select mode
 - [x] **Space Key** - Toggle selection in select mode
 - [x] **Updated Help Text** - Show arrow key hints in UI
+
+### v0.5.0 - OpenCode-style UX (Current)
+- [x] **Action Palette** - Press P to open command palette (like OpenCode Ctrl+P)
+- [x] **Unified Navigation** - ↑↓ to navigate everything, Enter to expand/select
+- [x] **Simplified Controls** - No more complex keyboard shortcuts to remember
+- [x] **Inline Selection** - Space to toggle, selection count shown in help bar
+- [x] **Removed MenuBar** - Clean minimal interface
+
+**New Controls:**
+| Key | Action |
+|-----|--------|
+| ↑↓ | Navigate sections and accounts |
+| Enter | Expand section / Toggle account selection |
+| Space | Toggle account selection |
+| P | Open Action Palette |
+| Q | Quit |
+| R | Refresh |
+| Esc | Clear selection |
 
 ---
 

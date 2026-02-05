@@ -41,7 +41,7 @@ const program = new Command();
 program
   .name("ocam")
   .description("OpenCode Account Manager - TUI dashboard and CLI for managing accounts")
-  .version("0.4.4");
+  .version("0.5.0");
 
 // Default command - show dashboard
 program

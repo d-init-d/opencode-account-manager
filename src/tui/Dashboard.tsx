@@ -4,13 +4,13 @@ import {
   Header,
   StatsRow,
   AccountList,
-  MenuBar,
-  MenuAction,
   ProviderList,
   McpServerList,
   SectionBox,
   ExportModal,
   ImportModal,
+  ActionPalette,
+  PaletteAction,
 } from "./components";
 import {
   readPluginAccountsFile,
@@ -32,8 +32,12 @@ interface DashboardProps {
   pluginPath?: string;
 }
 
-type ActiveSection = "providers" | "accounts" | "mcp";
-type ModalType = "none" | "export" | "import" | "export-selected";
+type ModalType = "none" | "export" | "import" | "export-selected" | "palette";
+
+// Navigation items
+type NavItem = 
+  | { type: "section"; id: "providers" | "accounts" | "mcp"; label: string }
+  | { type: "account"; index: number; email: string };
 
 function safeReadPluginFile(pluginPath: string): PluginAccountsFile {
   try {
@@ -55,10 +59,9 @@ export function Dashboard({ pluginPath }: DashboardProps) {
   const [summary, setSummary] = useState({ total: 0, available: 0, limited: 0 });
   const [message, setMessage] = useState<string | null>(null);
   
-  // UI state
-  const [activeSection, setActiveSection] = useState<ActiveSection>("providers");
-  const [selectMode, setSelectMode] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  // UI state - simplified
+  const [expandedSection, setExpandedSection] = useState<"providers" | "accounts" | "mcp">("accounts");
+  const [navIndex, setNavIndex] = useState(0); // Current navigation index
   const [checkedEmails, setCheckedEmails] = useState<Set<string>>(new Set());
   
   // Modal state
@@ -79,7 +82,6 @@ export function Dashboard({ pluginPath }: DashboardProps) {
     setAccounts(file.accounts);
     setSummary(summarizeAccounts(file.accounts));
     setCheckedEmails(new Set());
-    setSelectedIndex(0);
   };
 
   const refresh = () => {
@@ -93,88 +95,174 @@ export function Dashboard({ pluginPath }: DashboardProps) {
     loadAccounts();
   }, []);
 
-  // Keyboard navigation (only when no modal is open)
+  // Build navigation items list
+  const buildNavItems = (): NavItem[] => {
+    const items: NavItem[] = [
+      { type: "section", id: "providers", label: "PROVIDERS" },
+      { type: "section", id: "accounts", label: "ACCOUNTS" },
+    ];
+
+    // If accounts section is expanded, add account items
+    if (expandedSection === "accounts") {
+      accounts.forEach((acc, index) => {
+        items.push({ type: "account", index, email: acc.email });
+      });
+    }
+
+    items.push({ type: "section", id: "mcp", label: "MCP SERVERS" });
+
+    return items;
+  };
+
+  const navItems = buildNavItems();
+
+  // Palette actions
+  const paletteActions: PaletteAction[] = [
+    { id: "refresh", label: "Refresh", shortcut: "R" },
+    { id: "export", label: "Export All Accounts", shortcut: "E" },
+    { id: "import", label: "Import from File", shortcut: "I" },
+    { id: "import-am", label: "Import from Antigravity Manager", shortcut: "A" },
+    ...(checkedEmails.size > 0 ? [
+      { id: "export-selected", label: `Export Selected (${checkedEmails.size})`, shortcut: "X" },
+      { id: "enable-selected", label: `Enable Selected (${checkedEmails.size})` },
+      { id: "disable-selected", label: `Disable Selected (${checkedEmails.size})` },
+      { id: "delete-selected", label: `Delete Selected (${checkedEmails.size})`, shortcut: "Del" },
+      { id: "clear-selection", label: "Clear Selection", shortcut: "N" },
+    ] : []),
+    { id: "select-all", label: "Select All Accounts", shortcut: "Ctrl+A" },
+    { id: "quit", label: "Quit", shortcut: "Q" },
+  ];
+
+  // Keyboard navigation
   useInput((input, key) => {
+    // Handle palette separately
+    if (activeModal === "palette") return;
     if (activeModal !== "none") return;
 
-    // Section switching with Tab or Left/Right arrows
-    if (key.tab || key.rightArrow) {
-      setActiveSection(prev => {
-        if (prev === "providers") return "accounts";
-        if (prev === "accounts") return "mcp";
-        return "providers";
-      });
-      if (!key.rightArrow || activeSection !== "accounts") {
-        setSelectMode(false);
+    // Open palette with Ctrl+P or P
+    if ((key.ctrl && input === "p") || input === "p" || input === "P") {
+      setActiveModal("palette");
+      return;
+    }
+
+    // Quick shortcuts
+    if (input === "q" || input === "Q") {
+      exit();
+      return;
+    }
+    if (input === "r" || input === "R") {
+      refresh();
+      return;
+    }
+
+    // Navigate up
+    if (key.upArrow) {
+      setNavIndex(prev => Math.max(0, prev - 1));
+      return;
+    }
+
+    // Navigate down
+    if (key.downArrow) {
+      setNavIndex(prev => Math.min(navItems.length - 1, prev + 1));
+      return;
+    }
+
+    // Enter to expand/collapse section or toggle account
+    if (key.return) {
+      const currentItem = navItems[navIndex];
+      if (currentItem?.type === "section") {
+        setExpandedSection(currentItem.id);
+        // Reset nav index to stay on section header
+      } else if (currentItem?.type === "account") {
+        // Toggle selection
+        const email = currentItem.email;
+        setCheckedEmails(prev => {
+          const next = new Set(prev);
+          if (next.has(email)) {
+            next.delete(email);
+          } else {
+            next.add(email);
+          }
+          return next;
+        });
       }
       return;
     }
 
-    if (key.leftArrow) {
-      setActiveSection(prev => {
-        if (prev === "mcp") return "accounts";
-        if (prev === "accounts") return "providers";
-        return "mcp";
-      });
-      if (activeSection !== "accounts") {
-        setSelectMode(false);
+    // Space to toggle selection
+    if (input === " ") {
+      const currentItem = navItems[navIndex];
+      if (currentItem?.type === "account") {
+        const email = currentItem.email;
+        setCheckedEmails(prev => {
+          const next = new Set(prev);
+          if (next.has(email)) {
+            next.delete(email);
+          } else {
+            next.add(email);
+          }
+          return next;
+        });
       }
       return;
     }
 
-    // Number keys for section switching
-    if (input === "1") {
-      setActiveSection("providers");
-      setSelectMode(false);
-      return;
-    }
-    if (input === "2") {
-      setActiveSection("accounts");
-      return;
-    }
-    if (input === "3") {
-      setActiveSection("mcp");
-      setSelectMode(false);
-      return;
-    }
-
-    // Up/Down arrows for list navigation in accounts section
-    if (activeSection === "accounts") {
-      if (key.upArrow) {
-        if (!selectMode) {
-          setSelectMode(true);
-          setSelectedIndex(0);
-        } else {
-          setSelectedIndex(prev => Math.max(0, prev - 1));
-        }
-        return;
+    // Escape to clear selection
+    if (key.escape) {
+      if (checkedEmails.size > 0) {
+        setCheckedEmails(new Set());
+        showMessage("Selection cleared", 1500);
       }
-      if (key.downArrow) {
-        if (!selectMode) {
-          setSelectMode(true);
-          setSelectedIndex(0);
-        } else {
-          setSelectedIndex(prev => Math.min(accounts.length - 1, prev + 1));
-        }
-        return;
-      }
-      // Space to toggle selection in select mode
-      if (selectMode && input === " ") {
-        const email = accounts[selectedIndex]?.email;
-        if (email) {
-          setCheckedEmails(prev => {
-            const next = new Set(prev);
-            if (next.has(email)) {
-              next.delete(email);
-            } else {
-              next.add(email);
-            }
-            return next;
-          });
-        }
-      }
+      return;
     }
   });
+
+  // Handle palette action
+  const handlePaletteAction = (actionId: string) => {
+    setActiveModal("none");
+
+    switch (actionId) {
+      case "refresh":
+        refresh();
+        break;
+      case "export":
+        setActiveModal("export");
+        break;
+      case "import":
+        setActiveModal("import");
+        break;
+      case "import-am":
+        handleImportAM();
+        break;
+      case "export-selected":
+        if (checkedEmails.size > 0) {
+          setActiveModal("export-selected");
+        } else {
+          showMessage("No accounts selected", 2000);
+        }
+        break;
+      case "enable-selected":
+        handleEnableSelected();
+        break;
+      case "disable-selected":
+        handleDisableSelected();
+        break;
+      case "delete-selected":
+        handleDeleteSelected();
+        break;
+      case "select-all":
+        setCheckedEmails(new Set(accounts.map(a => a.email)));
+        showMessage(`Selected ${accounts.length} accounts`, 2000);
+        break;
+      case "clear-selection":
+        setCheckedEmails(new Set());
+        showMessage("Selection cleared", 1500);
+        break;
+      case "quit":
+        exit();
+        break;
+    }
+  };
 
   // Export completion handler
   const handleExportComplete = (filePath: string) => {
@@ -184,7 +272,6 @@ export function Dashboard({ pluginPath }: DashboardProps) {
 
   // Import completion handler
   const handleImportComplete = (importedAccounts: Account[], newCount: number, overwrittenCount: number) => {
-    // Merge imported accounts with existing (overwrite mode)
     const file = safeReadPluginFile(resolvedPath);
     const merged = mergeAccounts(file, importedAccounts, "merge");
     writePluginAccountsFile(pluginPath, merged);
@@ -214,7 +301,7 @@ export function Dashboard({ pluginPath }: DashboardProps) {
 
     const added = merged.accounts.length - existingFile.accounts.length;
     showMessage(
-      `Imported from AM: ${result.accounts.length} found, ${added} new. Total: ${merged.accounts.length}`,
+      `Imported from AM: ${result.accounts.length} found, ${added} new`,
       5000
     );
 
@@ -241,7 +328,7 @@ export function Dashboard({ pluginPath }: DashboardProps) {
     writePluginAccountsFile(pluginPath, file);
     showMessage(`Enabled ${count} accounts`, 3000);
     loadAccounts();
-    setSelectMode(false);
+    setCheckedEmails(new Set());
   };
 
   const handleDisableSelected = () => {
@@ -264,7 +351,7 @@ export function Dashboard({ pluginPath }: DashboardProps) {
     writePluginAccountsFile(pluginPath, file);
     showMessage(`Disabled ${count} accounts`, 3000);
     loadAccounts();
-    setSelectMode(false);
+    setCheckedEmails(new Set());
   };
 
   const handleDeleteSelected = () => {
@@ -282,75 +369,13 @@ export function Dashboard({ pluginPath }: DashboardProps) {
     writePluginAccountsFile(pluginPath, file);
     showMessage(`Deleted ${deletedCount} accounts`, 3000);
     loadAccounts();
-    setSelectMode(false);
-  };
-
-  const handleSelectAll = () => {
-    setCheckedEmails(new Set(accounts.map(a => a.email)));
-  };
-
-  const handleSelectNone = () => {
     setCheckedEmails(new Set());
-  };
-
-  const handleAction = (action: MenuAction) => {
-    // Don't handle actions when modal is open
-    if (activeModal !== "none") return;
-
-    switch (action) {
-      case "refresh":
-        refresh();
-        break;
-      case "export":
-        setActiveModal("export");
-        break;
-      case "import-file":
-        setActiveModal("import");
-        break;
-      case "import-am":
-        handleImportAM();
-        break;
-      case "toggle-select-mode":
-        if (activeSection === "accounts") {
-          setSelectMode(prev => !prev);
-          setCheckedEmails(new Set());
-          setSelectedIndex(0);
-        } else {
-          showMessage("Switch to Accounts section first (Tab)", 2000);
-        }
-        break;
-      case "select-all":
-        handleSelectAll();
-        break;
-      case "select-none":
-        handleSelectNone();
-        break;
-      case "enable-selected":
-        handleEnableSelected();
-        break;
-      case "disable-selected":
-        handleDisableSelected();
-        break;
-      case "delete-selected":
-        handleDeleteSelected();
-        break;
-      case "export-selected":
-        if (checkedEmails.size === 0) {
-          showMessage("No accounts selected", 2000);
-        } else {
-          setActiveModal("export-selected");
-        }
-        break;
-      case "quit":
-        exit();
-        break;
-    }
   };
 
   // Calculate stats
   const configSummary = opencodeInfo ? getConfigSummary(opencodeInfo) : null;
 
-  // Get accounts to export (all or selected)
+  // Get accounts to export
   const getAccountsForExport = (): Account[] => {
     if (activeModal === "export-selected") {
       return accounts.filter(acc => checkedEmails.has(acc.email));
@@ -358,7 +383,15 @@ export function Dashboard({ pluginPath }: DashboardProps) {
     return accounts;
   };
 
-  // If modal is open, render only the modal
+  // Find current nav item for highlighting
+  const currentNavItem = navItems[navIndex];
+  const isOnSection = (id: string) => currentNavItem?.type === "section" && currentNavItem.id === id;
+  const getAccountNavState = (index: number) => {
+    const item = navItems[navIndex];
+    return item?.type === "account" && item.index === index;
+  };
+
+  // Render modals
   if (activeModal === "export" || activeModal === "export-selected") {
     return (
       <Box flexDirection="column" padding={1}>
@@ -392,59 +425,52 @@ export function Dashboard({ pluginPath }: DashboardProps) {
         stats={[
           { label: "Providers", value: configSummary?.providers || 0, color: "cyan" },
           { label: "Models", value: configSummary?.models || 0, color: "yellow" },
-          { label: "MCP On", value: configSummary?.mcpEnabled || 0, color: "green" },
-          { label: "MCP Off", value: configSummary?.mcpDisabled || 0, color: "red" },
+          { label: "MCP", value: configSummary?.mcpEnabled || 0, color: "green" },
           { label: "Accounts", value: summary.total, color: "white" },
           { label: "Available", value: summary.available, color: "green" },
           { label: "Limited", value: summary.limited, color: "yellow" },
         ]}
       />
 
-      {/* Tab indicator */}
+      {/* Help bar */}
       <Box marginY={1}>
-        <Text dimColor>Sections: </Text>
-        <Text color={activeSection === "providers" ? "cyan" : "gray"} bold={activeSection === "providers"}>
-          [1] Providers
-        </Text>
-        <Text> </Text>
-        <Text color={activeSection === "accounts" ? "cyan" : "gray"} bold={activeSection === "accounts"}>
-          [2] Accounts
-        </Text>
-        <Text> </Text>
-        <Text color={activeSection === "mcp" ? "cyan" : "gray"} bold={activeSection === "mcp"}>
-          [3] MCP
-        </Text>
-        <Text dimColor>  (←→ or Tab to switch, ↑↓ in Accounts)</Text>
+        <Text dimColor>↑↓ navigate • Enter expand/select • Space toggle • </Text>
+        <Text color="cyan" bold>P</Text>
+        <Text dimColor> actions • </Text>
+        <Text dimColor>Q quit</Text>
+        {checkedEmails.size > 0 && (
+          <Text color="yellow"> • {checkedEmails.size} selected</Text>
+        )}
       </Box>
 
       {/* Providers Section */}
       <SectionBox 
         title="PROVIDERS" 
-        borderColor={activeSection === "providers" ? "cyan" : "gray"}
-        collapsed={activeSection !== "providers"}
+        borderColor={isOnSection("providers") ? "cyan" : (expandedSection === "providers" ? "white" : "gray")}
+        collapsed={expandedSection !== "providers"}
       >
         {opencodeInfo && <ProviderList providers={opencodeInfo.providers} />}
       </SectionBox>
 
       {/* Plugin Accounts Section */}
       <SectionBox 
-        title={`PLUGIN ACCOUNTS (${opencodeInfo?.plugins[0]?.name || "antigravity-auth"})`}
-        borderColor={activeSection === "accounts" ? (selectMode ? "yellow" : "cyan") : "gray"}
-        collapsed={activeSection !== "accounts"}
+        title={`ACCOUNTS (${opencodeInfo?.plugins[0]?.name || "antigravity-auth"})`}
+        borderColor={isOnSection("accounts") || (currentNavItem?.type === "account") ? "cyan" : (expandedSection === "accounts" ? "white" : "gray")}
+        collapsed={expandedSection !== "accounts"}
       >
         <AccountList 
           accounts={accounts} 
-          selectedIndex={selectMode ? selectedIndex : -1}
+          selectedIndex={currentNavItem?.type === "account" ? currentNavItem.index : -1}
           checkedEmails={checkedEmails}
-          showCheckbox={selectMode}
+          showCheckbox={true}
         />
       </SectionBox>
 
       {/* MCP Servers Section */}
       <SectionBox 
         title="MCP SERVERS" 
-        borderColor={activeSection === "mcp" ? "cyan" : "gray"}
-        collapsed={activeSection !== "mcp"}
+        borderColor={isOnSection("mcp") ? "cyan" : (expandedSection === "mcp" ? "white" : "gray")}
+        collapsed={expandedSection !== "mcp"}
       >
         {opencodeInfo && <McpServerList servers={opencodeInfo.mcpServers} />}
       </SectionBox>
@@ -454,19 +480,25 @@ export function Dashboard({ pluginPath }: DashboardProps) {
         <Text dimColor>Config: {opencodeInfo?.configPath || "N/A"}</Text>
       </Box>
 
-      {/* Menu */}
-      <Box marginTop={1}>
-        <MenuBar 
-          onSelect={handleAction} 
-          selectMode={selectMode}
-          selectedCount={checkedEmails.size}
-        />
-      </Box>
-
       {/* Message */}
       {message && (
         <Box marginTop={1}>
           <Text color="green">→ {message}</Text>
+        </Box>
+      )}
+
+      {/* Action Palette overlay */}
+      {activeModal === "palette" && (
+        <Box 
+          position="absolute" 
+          marginTop={3}
+          marginLeft={10}
+        >
+          <ActionPalette
+            actions={paletteActions}
+            onSelect={handlePaletteAction}
+            onClose={() => setActiveModal("none")}
+          />
         </Box>
       )}
     </Box>

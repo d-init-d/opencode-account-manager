@@ -11,3 +11,4 @@ export { PasswordInput } from "./PasswordInput";
 export { FileBrowser } from "./FileBrowser";
 export { ExportModal } from "./ExportModal";
 export { ImportModal } from "./ImportModal";
+export { ActionPalette, PaletteAction } from "./ActionPalette";
