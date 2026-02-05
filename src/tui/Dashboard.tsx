@@ -524,7 +524,7 @@ export function Dashboard({ pluginPath }: DashboardProps) {
         <>
           <SectionBox 
             title="PROVIDERS" 
-            borderColor={isOnSection("providers") ? "cyan" : (expandedSection === "providers" ? "white" : "gray")}
+            borderColor={isOnSection("providers") ? "white" : (expandedSection === "providers" ? "gray" : "gray")}
             collapsed={expandedSection !== "providers"}
           >
             {opencodeInfo && <ProviderList providers={opencodeInfo.providers} />}
@@ -532,7 +532,7 @@ export function Dashboard({ pluginPath }: DashboardProps) {
 
           <SectionBox 
             title={`ACCOUNTS (${opencodeInfo?.plugins[0]?.name || "antigravity-auth"})`}
-            borderColor={isOnSection("accounts") || (currentSettingsItem?.type === "account") ? "cyan" : (expandedSection === "accounts" ? "white" : "gray")}
+            borderColor={isOnSection("accounts") || (currentSettingsItem?.type === "account") ? "white" : "gray"}
             collapsed={expandedSection !== "accounts"}
           >
             <AccountList 
@@ -545,7 +545,7 @@ export function Dashboard({ pluginPath }: DashboardProps) {
 
           <SectionBox 
             title="MCP SERVERS" 
-            borderColor={isOnSection("mcp") ? "cyan" : (expandedSection === "mcp" ? "white" : "gray")}
+            borderColor={isOnSection("mcp") ? "white" : "gray"}
             collapsed={expandedSection !== "mcp"}
           >
             {opencodeInfo && <McpServerList servers={opencodeInfo.mcpServers} />}

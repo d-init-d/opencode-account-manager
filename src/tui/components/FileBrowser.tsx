@@ -292,7 +292,7 @@ export function FileBrowser({
     <Box
       flexDirection="column"
       borderStyle="round"
-      borderColor="cyan"
+      borderColor="gray"
       paddingX={2}
       paddingY={1}
     >

@@ -227,11 +227,11 @@ export function ImportModal({ existingAccounts, onComplete, onCancel }: ImportMo
         <Box
           flexDirection="column"
           borderStyle="round"
-          borderColor="cyan"
+          borderColor="gray"
           paddingX={2}
           paddingY={1}
         >
-          <Text bold color="cyan">IMPORT PREVIEW</Text>
+          <Text bold>IMPORT PREVIEW</Text>
           <Box marginY={1}>
             <Text>
               Found {importedAccounts.length} accounts in{" "}
@@ -277,11 +277,11 @@ export function ImportModal({ existingAccounts, onComplete, onCancel }: ImportMo
         <Box
           flexDirection="column"
           borderStyle="round"
-          borderColor="cyan"
+          borderColor="gray"
           paddingX={2}
           paddingY={1}
         >
-          <Text color="cyan">Importing...</Text>
+          <Text>Importing...</Text>
         </Box>
       )}
 

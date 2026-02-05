@@ -152,11 +152,11 @@ export function ExportModal({ accounts, onComplete, onCancel }: ExportModalProps
         <Box
           flexDirection="column"
           borderStyle="round"
-          borderColor="cyan"
+          borderColor="gray"
           paddingX={2}
           paddingY={1}
         >
-          <Text bold color="cyan">EXPORT {accounts.length} ACCOUNTS</Text>
+          <Text bold>EXPORT {accounts.length} ACCOUNTS</Text>
           <Box marginY={1} flexDirection="column">
             <Text>Select export format:</Text>
             <Box marginTop={1}>
@@ -202,11 +202,11 @@ export function ExportModal({ accounts, onComplete, onCancel }: ExportModalProps
         <Box
           flexDirection="column"
           borderStyle="round"
-          borderColor="cyan"
+          borderColor="gray"
           paddingX={2}
           paddingY={1}
         >
-          <Text color="cyan">Exporting...</Text>
+          <Text>Exporting...</Text>
         </Box>
       )}
 

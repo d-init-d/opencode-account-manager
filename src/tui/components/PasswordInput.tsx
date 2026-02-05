@@ -89,13 +89,13 @@ export function PasswordInput({
     <Box
       flexDirection="column"
       borderStyle="round"
-      borderColor="cyan"
+      borderColor="gray"
       paddingX={2}
       paddingY={1}
     >
       {/* Title */}
       <Box marginBottom={1}>
-        <Text bold color="cyan">{title}</Text>
+        <Text bold>{title}</Text>
         {subtitle && <Text dimColor> - {subtitle}</Text>}
       </Box>
 

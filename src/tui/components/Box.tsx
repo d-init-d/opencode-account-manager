@@ -12,7 +12,7 @@ interface BoxProps {
 export function Box({
   title,
   children,
-  borderColor = "cyan",
+  borderColor = "gray",
   width,
   padding = 1,
 }: BoxProps) {
@@ -26,7 +26,7 @@ export function Box({
     >
       {title && (
         <InkBox marginBottom={1}>
-          <Text bold color={borderColor}>
+          <Text bold>
             {title}
           </Text>
         </InkBox>
