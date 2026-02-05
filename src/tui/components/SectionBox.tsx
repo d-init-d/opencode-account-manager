@@ -22,14 +22,14 @@ export function SectionBox({
       marginBottom={1}
     >
       <Box paddingX={1}>
-        <Text bold color="white">{title}</Text>
-        {collapsed && <Text dimColor> (collapsed)</Text>}
+        <Text bold>{title}</Text>
+        {collapsed ? <Text dimColor> (collapsed)</Text> : null}
       </Box>
-      {!collapsed && (
+      {!collapsed ? (
         <Box flexDirection="column" paddingY={0}>
           {children}
         </Box>
-      )}
+      ) : null}
     </Box>
   );
 }

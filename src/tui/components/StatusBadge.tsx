@@ -7,16 +7,16 @@ interface StatusBadgeProps {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  available: "green",
-  limited: "yellow",
+  available: "white",
+  limited: "gray",
   disabled: "gray",
-  error: "red",
+  error: "gray",
 };
 
 const STATUS_ICONS: Record<string, string> = {
   available: "●",
-  limited: "○",
-  disabled: "x",
+  limited: "◐",
+  disabled: "○",
   error: "!",
 };
 
