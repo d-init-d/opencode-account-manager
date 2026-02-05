@@ -60,17 +60,17 @@ export function AccountRow({ account, isSelected, isChecked, showCheckbox }: Acc
     : "";
   
   const cursor = isSelected ? ">" : " ";
-  const emailColor = status === "disabled" ? "gray" : (isSelected ? "white" : "cyan");
+  const emailColor = status === "disabled" ? "gray" : "white";
 
   return (
     <Box flexDirection="column">
       <Box flexDirection="row" paddingX={1}>
         <Box width={2}>
-          <Text color={isSelected ? "yellow" : "white"}>{cursor}</Text>
+          <Text color={isSelected ? "white" : "gray"}>{cursor}</Text>
         </Box>
         {showCheckbox && (
           <Box width={4}>
-            <Text color={isChecked ? "green" : "gray"}>{checkbox}</Text>
+            <Text color={isChecked ? "white" : "gray"}>{checkbox}</Text>
           </Box>
         )}
         <Box width={28}>
@@ -90,7 +90,7 @@ export function AccountRow({ account, isSelected, isChecked, showCheckbox }: Acc
       </Box>
       {status === "limited" && limitDetails.length > 0 && (
         <Box paddingLeft={showCheckbox ? 8 : 4}>
-          <Text color="gray">
+          <Text dimColor>
             └─ {limitDetails.join(" | ")}
           </Text>
         </Box>

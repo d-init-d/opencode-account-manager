@@ -37,18 +37,18 @@ export function McpServerList({ servers }: McpServerListProps) {
       {servers.map((server) => (
         <Box key={server.id}>
           <Box width={20}>
-            <Text color="cyan">{truncate(server.id, 18)}</Text>
+            <Text>{truncate(server.id, 18)}</Text>
           </Box>
           <Box width={10}>
             {server.enabled ? (
-              <Text color="green">enabled</Text>
+              <Text>enabled</Text>
             ) : (
-              <Text color="red">disabled</Text>
+              <Text dimColor>disabled</Text>
             )}
           </Box>
           <Box width={8}>
             {server.hasEnvVars ? (
-              <Text color="yellow">{server.envVarCount}</Text>
+              <Text>{server.envVarCount}</Text>
             ) : (
               <Text dimColor>-</Text>
             )}

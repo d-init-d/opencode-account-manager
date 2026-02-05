@@ -37,15 +37,13 @@ export function ProviderList({ providers }: ProviderListProps) {
       {providers.map((provider) => (
         <Box key={provider.id}>
           <Box width={20}>
-            <Text color="cyan">{truncate(provider.name || provider.id, 18)}</Text>
+            <Text>{truncate(provider.name || provider.id, 18)}</Text>
           </Box>
           <Box width={10}>
-            <Text color="yellow">{provider.modelCount}</Text>
+            <Text>{provider.modelCount}</Text>
           </Box>
           <Box width={10}>
-            <Text color={provider.type === "builtin" ? "green" : "magenta"}>
-              {provider.type}
-            </Text>
+            <Text dimColor>{provider.type}</Text>
           </Box>
           <Box>
             <Text dimColor>{provider.baseURL || "-"}</Text>

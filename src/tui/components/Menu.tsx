@@ -81,14 +81,14 @@ export function MenuBar({ onSelect, selectMode = false, selectedCount = 0 }: Men
     <Box flexDirection="column">
       {selectMode && (
         <Box marginBottom={1} paddingX={1}>
-          <Text color="yellow" bold>
+          <Text dimColor bold>
             SELECT MODE - {selectedCount} selected | ↑↓ navigate | SPACE toggle | ←→ switch section
           </Text>
         </Box>
       )}
       <Box
         borderStyle="single"
-        borderColor={selectMode ? "yellow" : "gray"}
+        borderColor={selectMode ? "white" : "gray"}
         paddingX={1}
         justifyContent="space-between"
       >

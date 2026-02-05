@@ -75,13 +75,13 @@ export function ActionPalette({ actions, onSelect, onClose }: ActionPaletteProps
     <Box
       flexDirection="column"
       borderStyle="round"
-      borderColor="cyan"
+      borderColor="gray"
       paddingX={1}
       paddingY={0}
     >
       {/* Search input */}
       <Box marginBottom={1}>
-        <Text color="cyan" bold>{">"} </Text>
+        <Text bold>{">"} </Text>
         <Text>{search || " "}</Text>
         <Text color="gray">_</Text>
       </Box>
@@ -95,10 +95,7 @@ export function ActionPalette({ actions, onSelect, onClose }: ActionPaletteProps
             const isSelected = index === selectedIndex;
             return (
               <Box key={action.id}>
-                <Text
-                  backgroundColor={isSelected ? "cyan" : undefined}
-                  color={isSelected ? "black" : "white"}
-                >
+                <Text inverse={isSelected} dimColor={!isSelected}>
                   {isSelected ? "▸ " : "  "}
                   {action.label}
                 </Text>

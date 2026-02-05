@@ -7,15 +7,31 @@ interface DashboardViewProps {
   selectedIndex: number;
 }
 
+interface ModelConfig {
+  key: string;
+  displayName: string;
+  shortName: string;
+}
+
 // Model definitions with display names
-const MODEL_CONFIGS = [
+const MODEL_CONFIGS: ModelConfig[] = [
   { key: "claude", displayName: "Claude", shortName: "Claude" },
-  { key: "gemini", displayName: "Gemini Pro", shortName: "G Pro" },
-  { key: "gemini-cli:gemini-3-flash-preview", displayName: "Gemini Flash", shortName: "G Flash" },
-  { key: "gemini-cli:gemini-3-pro-preview", displayName: "Gemini Pro", shortName: "G Pro" },
-  { key: "gemini-cli:gemini-2.5-pro", displayName: "G 2.5 Pro", shortName: "G2.5P" },
-  { key: "gemini-cli:imagen-3", displayName: "Imagen 3", shortName: "Img3" },
+  { key: "gemini-cli:gemini-3-pro-preview", displayName: "G3 Pro", shortName: "G3 Pro" },
+  { key: "gemini-cli:gemini-3-flash-preview", displayName: "G3 Flash", shortName: "G3 Fl" },
+  { key: "gemini-cli:imagen-3", displayName: "G3 Image", shortName: "G3 Img" },
+  { key: "gemini-cli:gemini-2.5-pro", displayName: "G2.5 Pro", shortName: "G2.5" },
+  { key: "gemini-cli:gemini-2.0-flash", displayName: "G2 Flash", shortName: "G2 Fl" },
+  { key: "gemini", displayName: "Gemini", shortName: "Gem" },
 ];
+
+const DEFAULT_MODEL_KEYS = [
+  "claude",
+  "gemini-cli:gemini-3-pro-preview",
+  "gemini-cli:gemini-3-flash-preview",
+  "gemini-cli:imagen-3",
+];
+
+const MODEL_CONFIG_MAP = new Map(MODEL_CONFIGS.map((model) => [model.key, model]));
 
 interface ModelStatus {
   available: boolean;
@@ -44,10 +60,10 @@ function calculatePercentage(resetTime: number): number {
   if (resetTime <= now) return 100;
   
   const remaining = resetTime - now;
-  const maxTime = 5 * 3600000; // 5 hours as max reference
-  const elapsed = maxTime - remaining;
-  const pct = Math.max(0, Math.min(100, Math.round((elapsed / maxTime) * 100)));
-  return pct;
+  const maxTime = 24 * 3600000;
+  const clamped = Math.min(remaining, maxTime);
+  const elapsed = maxTime - clamped;
+  return Math.max(0, Math.min(100, Math.round((elapsed / maxTime) * 100)));
 }
 
 function getModelStatus(account: Account, modelKey: string): ModelStatus {
@@ -74,40 +90,72 @@ function getModelStatus(account: Account, modelKey: string): ModelStatus {
   };
 }
 
-function getActiveModels(accounts: Account[]): typeof MODEL_CONFIGS {
-  const now = Date.now();
-  const activeKeys = new Set<string>();
-  
-  // Collect all model keys that have rate limit data
-  accounts.forEach(acc => {
+function getModelDisplayName(model: string): string {
+  if (model.includes(":")) {
+    const parts = model.split(":");
+    return parts[1] || parts[0];
+  }
+  return model;
+}
+
+function getModelShortName(model: string): string {
+  const name = getModelDisplayName(model);
+  if (name.length <= 7) return name;
+  return name.slice(0, 6) + "…";
+}
+
+function getDisplayModels(accounts: Account[]): ModelConfig[] {
+  const activeKeys = new Set<string>(DEFAULT_MODEL_KEYS);
+
+  accounts.forEach((acc) => {
     if (acc.rateLimitResetTimes) {
-      Object.keys(acc.rateLimitResetTimes).forEach(key => {
+      Object.keys(acc.rateLimitResetTimes).forEach((key) => {
         activeKeys.add(key);
       });
     }
   });
-  
-  // Return models that are in our config OR have rate limit data
-  const models = MODEL_CONFIGS.filter(m => activeKeys.has(m.key));
-  
-  // If no models found, show default ones
-  if (models.length === 0) {
-    return MODEL_CONFIGS.slice(0, 2); // Claude and Gemini
-  }
-  
+
+  const models: ModelConfig[] = [];
+
+  DEFAULT_MODEL_KEYS.forEach((key) => {
+    const config = MODEL_CONFIG_MAP.get(key);
+    if (config) models.push(config);
+  });
+
+  const extraKeys = Array.from(activeKeys).filter((key) => !DEFAULT_MODEL_KEYS.includes(key));
+  extraKeys.sort().forEach((key) => {
+    const config = MODEL_CONFIG_MAP.get(key);
+    if (config) {
+      models.push(config);
+    } else {
+      models.push({
+        key,
+        displayName: getModelDisplayName(key),
+        shortName: getModelShortName(key),
+      });
+    }
+  });
+
   return models;
 }
 
+function formatLastUsed(timestamp?: number): string {
+  if (!timestamp) return "--";
+  const date = new Date(timestamp);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${month}/${day} ${hours}:${minutes}`;
+}
+
 // Progress bar component using text
-function ProgressBar({ percentage, width = 8 }: { percentage: number; width?: number }) {
+function ProgressBar({ percentage, width = 6 }: { percentage: number; width?: number }) {
   const filled = Math.round((percentage / 100) * width);
   const empty = width - filled;
-  
-  // Color based on percentage
-  const color = percentage === 100 ? "white" : percentage >= 50 ? "gray" : "gray";
-  
+
   return (
-    <Text color={color}>
+    <Text>
       {"█".repeat(filled)}
       <Text dimColor>{"░".repeat(empty)}</Text>
     </Text>
@@ -115,19 +163,17 @@ function ProgressBar({ percentage, width = 8 }: { percentage: number; width?: nu
 }
 
 // Model cell component
-function ModelCell({ status, width = 18 }: { status: ModelStatus; width?: number }) {
+function ModelCell({ status, width = 20 }: { status: ModelStatus; width?: number }) {
   return (
     <Box width={width}>
       <Box width={8}>
         <ProgressBar percentage={status.percentage} width={6} />
       </Box>
-      <Box width={6}>
-        <Text dimColor>{status.timeRemaining.padStart(5)}</Text>
+      <Box width={7}>
+        <Text dimColor>{status.timeRemaining.padStart(6)}</Text>
       </Box>
-      <Box width={4}>
-        <Text color={status.percentage === 100 ? "white" : "gray"}>
-          {String(status.percentage).padStart(3)}%
-        </Text>
+      <Box width={5}>
+        <Text>{`${status.percentage}%`.padStart(4)}</Text>
       </Box>
     </Box>
   );
@@ -143,9 +189,11 @@ export function DashboardView({ accounts, selectedIndex }: DashboardViewProps) {
     );
   }
 
-  const activeModels = getActiveModels(accounts);
-  const modelColumnWidth = 18;
+  const displayModels = getDisplayModels(accounts);
+  const modelColumnWidth = 20;
   const emailWidth = 28;
+  const lastUsedWidth = 14;
+  const totalWidth = 3 + emailWidth + displayModels.length * modelColumnWidth + lastUsedWidth;
 
   return (
     <Box flexDirection="column">
@@ -157,16 +205,19 @@ export function DashboardView({ accounts, selectedIndex }: DashboardViewProps) {
         <Box width={emailWidth}>
           <Text dimColor bold>EMAIL</Text>
         </Box>
-        {activeModels.map(model => (
+        {displayModels.map(model => (
           <Box key={model.key} width={modelColumnWidth}>
             <Text dimColor bold>{model.shortName}</Text>
           </Box>
         ))}
+        <Box width={lastUsedWidth}>
+          <Text dimColor bold>LAST USED</Text>
+        </Box>
       </Box>
 
       {/* Separator */}
       <Box paddingX={1}>
-        <Text dimColor>{"─".repeat(3 + emailWidth + activeModels.length * modelColumnWidth)}</Text>
+        <Text dimColor>{"─".repeat(totalWidth)}</Text>
       </Box>
 
       {/* Account rows */}
@@ -199,7 +250,7 @@ export function DashboardView({ accounts, selectedIndex }: DashboardViewProps) {
             </Box>
             
             {/* Model columns */}
-            {activeModels.map(model => {
+            {displayModels.map(model => {
               const status = getModelStatus(account, model.key);
               
               if (isDisabled) {
@@ -218,13 +269,16 @@ export function DashboardView({ accounts, selectedIndex }: DashboardViewProps) {
                 />
               );
             })}
+            <Box width={lastUsedWidth}>
+              <Text dimColor>{formatLastUsed(account.lastUsed)}</Text>
+            </Box>
           </Box>
         );
       })}
 
       {/* Summary */}
       <Box paddingX={1} marginTop={1}>
-        <Text dimColor>{"─".repeat(3 + emailWidth + activeModels.length * modelColumnWidth)}</Text>
+        <Text dimColor>{"─".repeat(totalWidth)}</Text>
       </Box>
       
       <Box paddingX={1}>
