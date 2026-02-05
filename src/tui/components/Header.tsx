@@ -13,10 +13,10 @@ export function Header({
   return (
     <Box flexDirection="column" marginBottom={1}>
       <Box>
-        <Text bold color="cyan">
-          * {title}
+        <Text bold color="white">
+          {title}
         </Text>
-        {subtitle && <Text dimColor> - {subtitle}</Text>}
+        {subtitle ? <Text dimColor> / {subtitle}</Text> : null}
       </Box>
       <Text dimColor>
         ────────────────────────────────────────────────────────────────

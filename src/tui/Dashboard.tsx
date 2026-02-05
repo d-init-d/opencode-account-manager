@@ -463,59 +463,57 @@ export function Dashboard({ pluginPath }: DashboardProps) {
       {/* Tab bar */}
       <Box marginBottom={1}>
         <Text 
-          backgroundColor={activeTab === "dashboard" ? "cyan" : undefined}
-          color={activeTab === "dashboard" ? "black" : "gray"}
+          inverse={activeTab === "dashboard"}
           bold={activeTab === "dashboard"}
         >
           {" DASHBOARD "}
         </Text>
         <Text> </Text>
         <Text 
-          backgroundColor={activeTab === "settings" ? "cyan" : undefined}
-          color={activeTab === "settings" ? "black" : "gray"}
+          inverse={activeTab === "settings"}
           bold={activeTab === "settings"}
         >
           {" SETTINGS "}
         </Text>
-        <Text dimColor>  (Tab to switch)</Text>
+        <Text dimColor>  [Tab]</Text>
       </Box>
 
       {/* Global Stats */}
       <StatsRow
         stats={[
           { label: "Accounts", value: summary.total, color: "white" },
-          { label: "Available", value: summary.available, color: "green" },
-          { label: "Limited", value: summary.limited, color: "yellow" },
-          { label: "Providers", value: configSummary?.providers || 0, color: "cyan" },
-          { label: "MCP", value: configSummary?.mcpEnabled || 0, color: "magenta" },
+          { label: "Available", value: summary.available, color: "white" },
+          { label: "Limited", value: summary.limited, color: "gray" },
+          { label: "Providers", value: configSummary?.providers || 0, color: "white" },
+          { label: "MCP", value: configSummary?.mcpEnabled || 0, color: "white" },
         ]}
       />
 
       {/* Help bar */}
       <Box marginY={1}>
         <Text dimColor>↑↓ navigate • Space select • </Text>
-        <Text color="cyan" bold>R</Text>
+        <Text bold>R</Text>
         <Text dimColor> refresh • </Text>
-        <Text color="cyan" bold>P</Text>
+        <Text bold>P</Text>
         <Text dimColor> actions • </Text>
-        <Text color="cyan" bold>Tab</Text>
-        <Text dimColor> switch • Q quit</Text>
-        {checkedEmails.size > 0 && (
-          <Text color="yellow"> • {checkedEmails.size} selected</Text>
-        )}
+        <Text bold>Q</Text>
+        <Text dimColor> quit</Text>
+        {checkedEmails.size > 0 ? (
+          <Text> • {checkedEmails.size} selected</Text>
+        ) : null}
       </Box>
 
       {/* Loading indicator */}
       {isLoading && loadingStep ? (
         <Box marginBottom={1} paddingX={1}>
-          <Text color="cyan">⟳ {loadingStep}</Text>
+          <Text dimColor>⟳ {loadingStep}</Text>
         </Box>
       ) : null}
 
       {/* Tab content */}
       {activeTab === "dashboard" ? (
-        // Dashboard Tab - Rate limits view like Antigravity Manager
-        <Box flexDirection="column" borderStyle="round" borderColor="cyan" padding={1}>
+        // Dashboard Tab - Rate limits view
+        <Box flexDirection="column" borderStyle="round" borderColor="gray" padding={1}>
           <DashboardView 
             accounts={accounts} 
             selectedIndex={dashboardIndex}
@@ -563,7 +561,7 @@ export function Dashboard({ pluginPath }: DashboardProps) {
       {/* Message */}
       {message ? (
         <Box marginTop={1}>
-          <Text color="green">→ {message}</Text>
+          <Text dimColor>→ {message}</Text>
         </Box>
       ) : null}
 
