@@ -159,11 +159,12 @@ export function DashboardView({ accounts, selectedIndex }: DashboardViewProps) {
 
       {/* Legend */}
       <Box marginTop={1}>
-        <Text dimColor>
-          <Text color="green">████</Text> Available  
-          <Text color="yellow">░░░░</Text> Limited  
-          <Text color="gray">████</Text> Disabled
-        </Text>
+        <Text color="green">████</Text>
+        <Text dimColor> Available  </Text>
+        <Text color="yellow">░░░░</Text>
+        <Text dimColor> Limited  </Text>
+        <Text color="gray">████</Text>
+        <Text dimColor> Disabled</Text>
       </Box>
     </Box>
   );

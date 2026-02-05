@@ -508,10 +508,7 @@ export function Dashboard({ pluginPath }: DashboardProps) {
       {/* Loading indicator */}
       {isLoading && (
         <Box marginBottom={1} paddingX={1}>
-          <Text color="cyan">
-            <Text color="cyan">⟳ </Text>
-            {loadingStep}
-          </Text>
+          <Text color="cyan">⟳ {loadingStep}</Text>
         </Box>
       )}
 
