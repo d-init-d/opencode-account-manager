@@ -39,9 +39,9 @@ function safeReadPluginFile(pluginPath: string) {
 const program = new Command();
 
 program
-  .name("antigravity-sync")
-  .description("Antigravity Account Manager - TUI dashboard and CLI")
-  .version("0.2.0");
+  .name("ocam")
+  .description("OpenCode Account Manager - TUI dashboard and CLI for managing accounts")
+  .version("0.4.0");
 
 // Default command - show dashboard
 program
