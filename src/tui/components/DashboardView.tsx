@@ -149,7 +149,7 @@ export function DashboardView({ accounts, selectedIndex }: DashboardViewProps) {
               return (
                 <Box key={model} width={14}>
                   <Text color={barColor}>{bar}</Text>
-                  {time && <Text dimColor> {time}</Text>}
+                  {time ? <Text dimColor> {time}</Text> : null}
                 </Box>
               );
             })}
