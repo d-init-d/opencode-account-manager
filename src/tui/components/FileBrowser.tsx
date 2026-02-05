@@ -379,7 +379,7 @@ export function FileBrowser({
             marginY={1}
           >
             <Text>
-              {inputPath}
+              {inputPath || " "}
               <Text color="yellow">▌</Text>
             </Text>
           </Box>

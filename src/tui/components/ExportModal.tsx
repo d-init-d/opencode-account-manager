@@ -224,7 +224,7 @@ export function ExportModal({ accounts, onComplete, onCancel }: ExportModalProps
             <Text>Exported {accounts.length} accounts to:</Text>
           </Box>
           <Box>
-            <Text color="cyan">{exportedPath}</Text>
+            <Text color="cyan">{exportedPath || "Unknown path"}</Text>
           </Box>
           <Box marginTop={1}>
             <Text dimColor>[Enter] Close</Text>
@@ -243,7 +243,7 @@ export function ExportModal({ accounts, onComplete, onCancel }: ExportModalProps
         >
           <Text bold color="red">✗ Export Failed</Text>
           <Box marginTop={1}>
-            <Text color="red">{error}</Text>
+            <Text color="red">{error || "Unknown error"}</Text>
           </Box>
           <Box marginTop={1}>
             <Text dimColor>[Enter] Close</Text>

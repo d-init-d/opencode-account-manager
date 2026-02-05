@@ -82,7 +82,7 @@ export function ActionPalette({ actions, onSelect, onClose }: ActionPaletteProps
       {/* Search input */}
       <Box marginBottom={1}>
         <Text color="cyan" bold>{">"} </Text>
-        <Text>{search}</Text>
+        <Text>{search || " "}</Text>
         <Text color="gray">_</Text>
       </Box>
 

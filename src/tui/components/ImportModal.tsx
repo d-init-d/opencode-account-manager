@@ -322,7 +322,7 @@ export function ImportModal({ existingAccounts, onComplete, onCancel }: ImportMo
         >
           <Text bold color="red">✗ Import Failed</Text>
           <Box marginTop={1}>
-            <Text color="red">{error}</Text>
+            <Text color="red">{error || "Unknown error"}</Text>
           </Box>
           <Box marginTop={1}>
             <Text dimColor>[Enter] Try again  [Esc] Cancel</Text>
