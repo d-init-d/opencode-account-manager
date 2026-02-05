@@ -150,7 +150,7 @@ export function PasswordInput({
       {/* Help */}
       <Box marginTop={1}>
         <Text dimColor>
-          {mode === "confirm" ? "[Tab] Switch field  " : ""}
+          {mode === "confirm" && "[Tab] Switch field  "}
           [Enter] Confirm  [Esc] Cancel
         </Text>
       </Box>
