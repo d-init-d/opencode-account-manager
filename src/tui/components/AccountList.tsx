@@ -23,25 +23,36 @@ function formatDuration(ms: number): string {
 function getAccountStatus(account: Account): {
   status: "available" | "limited" | "disabled";
   resetIn: string;
+  limitDetails: string[];
 } {
   if (account.enabled === false) {
-    return { status: "disabled", resetIn: "-" };
+    return { status: "disabled", resetIn: "-", limitDetails: [] };
   }
   const resets = account.rateLimitResetTimes || {};
   const now = Date.now();
-  const future = Object.values(resets).filter((v) => v > now);
-  if (future.length === 0) {
-    return { status: "available", resetIn: "-" };
+  const limitDetails: string[] = [];
+  
+  // Build detailed limit info for each model
+  for (const [model, resetTime] of Object.entries(resets)) {
+    if (resetTime > now) {
+      limitDetails.push(`${model}: ${formatDuration(resetTime - now)}`);
+    }
   }
-  const nextReset = Math.min(...future);
+  
+  if (limitDetails.length === 0) {
+    return { status: "available", resetIn: "-", limitDetails: [] };
+  }
+  
+  const nextReset = Math.min(...Object.values(resets).filter((v) => v > now));
   return {
     status: "limited",
     resetIn: formatDuration(nextReset - now),
+    limitDetails,
   };
 }
 
 export function AccountRow({ account, isSelected, isChecked, showCheckbox }: AccountRowProps) {
-  const { status, resetIn } = getAccountStatus(account);
+  const { status, resetIn, limitDetails } = getAccountStatus(account);
   const project = account.projectId || account.managedProjectId || "-";
 
   const checkbox = showCheckbox 
@@ -52,29 +63,38 @@ export function AccountRow({ account, isSelected, isChecked, showCheckbox }: Acc
   const emailColor = status === "disabled" ? "gray" : (isSelected ? "white" : "cyan");
 
   return (
-    <Box flexDirection="row" paddingX={1}>
-      <Box width={2}>
-        <Text color={isSelected ? "yellow" : "white"}>{cursor}</Text>
+    <Box flexDirection="column">
+      <Box flexDirection="row" paddingX={1}>
+        <Box width={2}>
+          <Text color={isSelected ? "yellow" : "white"}>{cursor}</Text>
+        </Box>
+        {showCheckbox && (
+          <Box width={4}>
+            <Text color={isChecked ? "green" : "gray"}>{checkbox}</Text>
+          </Box>
+        )}
+        <Box width={28}>
+          <Text color={emailColor} strikethrough={status === "disabled"}>
+            {account.email}
+          </Text>
+        </Box>
+        <Box width={18}>
+          <Text dimColor>{project.slice(0, 16)}</Text>
+        </Box>
+        <Box width={12}>
+          <StatusBadge status={status} />
+        </Box>
+        <Box width={10}>
+          <Text dimColor>{resetIn}</Text>
+        </Box>
       </Box>
-      {showCheckbox && (
-        <Box width={4}>
-          <Text color={isChecked ? "green" : "gray"}>{checkbox}</Text>
+      {status === "limited" && limitDetails.length > 0 && (
+        <Box paddingLeft={showCheckbox ? 8 : 4}>
+          <Text color="gray">
+            └─ {limitDetails.join(" | ")}
+          </Text>
         </Box>
       )}
-      <Box width={28}>
-        <Text color={emailColor} strikethrough={status === "disabled"}>
-          {account.email}
-        </Text>
-      </Box>
-      <Box width={18}>
-        <Text dimColor>{project.slice(0, 16)}</Text>
-      </Box>
-      <Box width={12}>
-        <StatusBadge status={status} />
-      </Box>
-      <Box width={10}>
-        <Text dimColor>{resetIn}</Text>
-      </Box>
     </Box>
   );
 }

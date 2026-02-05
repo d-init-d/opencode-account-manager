@@ -172,6 +172,38 @@ export function Dashboard({ pluginPath }: DashboardProps) {
     setSelectMode(false);
   };
 
+  const handleDeleteSelected = () => {
+    if (checkedEmails.size === 0) {
+      showMessage("No accounts selected", 2000);
+      return;
+    }
+
+    const file = safeReadPluginFile(resolvedPath);
+    const beforeCount = file.accounts.length;
+    
+    file.accounts = file.accounts.filter(acc => !checkedEmails.has(acc.email));
+    const deletedCount = beforeCount - file.accounts.length;
+
+    writePluginAccountsFile(pluginPath, file);
+    showMessage(`Deleted ${deletedCount} accounts`, 3000);
+    loadAccounts();
+    setSelectMode(false);
+  };
+
+  const handleExportSelected = () => {
+    if (checkedEmails.size === 0) {
+      showMessage("No accounts selected", 2000);
+      return;
+    }
+
+    const selectedAccounts = accounts.filter(acc => checkedEmails.has(acc.email));
+    const exportFile = buildPortableExport(selectedAccounts);
+    const outPath = `antigravity-export-${Date.now()}.json`;
+    writeJsonFile(outPath, exportFile);
+    showMessage(`Exported ${selectedAccounts.length} accounts to ${outPath}`);
+    setSelectMode(false);
+  };
+
   const handleSelectAll = () => {
     setCheckedEmails(new Set(accounts.map(a => a.email)));
   };
@@ -210,6 +242,12 @@ export function Dashboard({ pluginPath }: DashboardProps) {
         break;
       case "disable-selected":
         handleDisableSelected();
+        break;
+      case "delete-selected":
+        handleDeleteSelected();
+        break;
+      case "export-selected":
+        handleExportSelected();
         break;
       case "quit":
         exit();

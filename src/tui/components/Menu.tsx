@@ -4,6 +4,7 @@ import { Box, Text, useInput } from "ink";
 export type MenuAction =
   | "refresh"
   | "export"
+  | "export-selected"
   | "import-file"
   | "import-am"
   | "toggle-select-mode"
@@ -11,6 +12,7 @@ export type MenuAction =
   | "select-none"
   | "enable-selected"
   | "disable-selected"
+  | "delete-selected"
   | "quit";
 
 interface MenuItem {
@@ -32,6 +34,8 @@ const MENU_ITEMS: MenuItem[] = [
   { label: "None", key: "N", action: "select-none", selectModeOnly: true },
   { label: "Enable", key: "E", action: "enable-selected", selectModeOnly: true },
   { label: "Disable", key: "D", action: "disable-selected", selectModeOnly: true },
+  { label: "Export", key: "X", action: "export-selected", selectModeOnly: true },
+  { label: "Delete", key: "DEL", action: "delete-selected", selectModeOnly: true },
   { label: "Quit", key: "Q", action: "quit" },
 ];
 
@@ -52,6 +56,8 @@ export function MenuBar({ onSelect, selectMode = false, selectedCount = 0 }: Men
       if (lower === "n") onSelect("select-none");
       if (lower === "e") onSelect("enable-selected");
       if (lower === "d") onSelect("disable-selected");
+      if (lower === "x") onSelect("export-selected");
+      if (key.delete || lower === "backspace") onSelect("delete-selected");
       if (lower === "r") onSelect("refresh");
       if (lower === "q") onSelect("quit");
     } else {
