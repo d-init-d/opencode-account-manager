@@ -9,17 +9,17 @@ import {
   ProviderList,
   McpServerList,
   SectionBox,
+  ExportModal,
+  ImportModal,
 } from "./components";
 import {
   readPluginAccountsFile,
   createEmptyPluginAccountsFile,
   summarizeAccounts,
-  buildPortableExport,
   mergeAccounts,
   writePluginAccountsFile,
 } from "../core/accounts";
 import { getPluginAccountsPath, getAmFolderPath } from "../core/paths";
-import { writeJsonFile } from "../core/utils";
 import { Account, PluginAccountsFile } from "../core/types";
 import { importFromAmFolder } from "../core/importers/amJson";
 import {
@@ -33,6 +33,7 @@ interface DashboardProps {
 }
 
 type ActiveSection = "providers" | "accounts" | "mcp";
+type ModalType = "none" | "export" | "import" | "export-selected";
 
 function safeReadPluginFile(pluginPath: string): PluginAccountsFile {
   try {
@@ -59,6 +60,9 @@ export function Dashboard({ pluginPath }: DashboardProps) {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [checkedEmails, setCheckedEmails] = useState<Set<string>>(new Set());
+  
+  // Modal state
+  const [activeModal, setActiveModal] = useState<ModalType>("none");
 
   const showMessage = (msg: string, duration = 3000) => {
     setMessage(msg);
@@ -89,8 +93,10 @@ export function Dashboard({ pluginPath }: DashboardProps) {
     loadAccounts();
   }, []);
 
-  // Keyboard navigation
+  // Keyboard navigation (only when no modal is open)
   useInput((input, key) => {
+    if (activeModal !== "none") return;
+
     // Section switching with Tab
     if (key.tab) {
       setActiveSection(prev => {
@@ -127,11 +133,22 @@ export function Dashboard({ pluginPath }: DashboardProps) {
     }
   });
 
-  const handleExport = () => {
-    const exportFile = buildPortableExport(accounts);
-    const outPath = `opencode-accounts-export-${Date.now()}.json`;
-    writeJsonFile(outPath, exportFile);
-    showMessage(`Exported ${accounts.length} accounts to ${outPath}`);
+  // Export completion handler
+  const handleExportComplete = (filePath: string) => {
+    setActiveModal("none");
+    showMessage(`Exported to ${filePath}`, 4000);
+  };
+
+  // Import completion handler
+  const handleImportComplete = (importedAccounts: Account[], newCount: number, overwrittenCount: number) => {
+    // Merge imported accounts with existing (overwrite mode)
+    const file = safeReadPluginFile(resolvedPath);
+    const merged = mergeAccounts(file, importedAccounts, "merge");
+    writePluginAccountsFile(pluginPath, merged);
+    
+    setActiveModal("none");
+    loadAccounts();
+    showMessage(`Imported: ${newCount} new, ${overwrittenCount} updated`, 4000);
   };
 
   const handleImportAM = () => {
@@ -225,20 +242,6 @@ export function Dashboard({ pluginPath }: DashboardProps) {
     setSelectMode(false);
   };
 
-  const handleExportSelected = () => {
-    if (checkedEmails.size === 0) {
-      showMessage("No accounts selected", 2000);
-      return;
-    }
-
-    const selectedAccounts = accounts.filter(acc => checkedEmails.has(acc.email));
-    const exportFile = buildPortableExport(selectedAccounts);
-    const outPath = `opencode-accounts-export-${Date.now()}.json`;
-    writeJsonFile(outPath, exportFile);
-    showMessage(`Exported ${selectedAccounts.length} accounts to ${outPath}`);
-    setSelectMode(false);
-  };
-
   const handleSelectAll = () => {
     setCheckedEmails(new Set(accounts.map(a => a.email)));
   };
@@ -248,15 +251,18 @@ export function Dashboard({ pluginPath }: DashboardProps) {
   };
 
   const handleAction = (action: MenuAction) => {
+    // Don't handle actions when modal is open
+    if (activeModal !== "none") return;
+
     switch (action) {
       case "refresh":
         refresh();
         break;
       case "export":
-        handleExport();
+        setActiveModal("export");
         break;
       case "import-file":
-        showMessage("Use CLI: ocam import <file>", 4000);
+        setActiveModal("import");
         break;
       case "import-am":
         handleImportAM();
@@ -286,7 +292,11 @@ export function Dashboard({ pluginPath }: DashboardProps) {
         handleDeleteSelected();
         break;
       case "export-selected":
-        handleExportSelected();
+        if (checkedEmails.size === 0) {
+          showMessage("No accounts selected", 2000);
+        } else {
+          setActiveModal("export-selected");
+        }
         break;
       case "quit":
         exit();
@@ -296,7 +306,39 @@ export function Dashboard({ pluginPath }: DashboardProps) {
 
   // Calculate stats
   const configSummary = opencodeInfo ? getConfigSummary(opencodeInfo) : null;
-  const disabledCount = accounts.filter(a => a.enabled === false).length;
+
+  // Get accounts to export (all or selected)
+  const getAccountsForExport = (): Account[] => {
+    if (activeModal === "export-selected") {
+      return accounts.filter(acc => checkedEmails.has(acc.email));
+    }
+    return accounts;
+  };
+
+  // If modal is open, render only the modal
+  if (activeModal === "export" || activeModal === "export-selected") {
+    return (
+      <Box flexDirection="column" padding={1}>
+        <ExportModal
+          accounts={getAccountsForExport()}
+          onComplete={handleExportComplete}
+          onCancel={() => setActiveModal("none")}
+        />
+      </Box>
+    );
+  }
+
+  if (activeModal === "import") {
+    return (
+      <Box flexDirection="column" padding={1}>
+        <ImportModal
+          existingAccounts={accounts}
+          onComplete={handleImportComplete}
+          onCancel={() => setActiveModal("none")}
+        />
+      </Box>
+    );
+  }
 
   return (
     <Box flexDirection="column" padding={1}>
