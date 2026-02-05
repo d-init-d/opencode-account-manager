@@ -1,80 +1,96 @@
-# Antigravity Account Manager
+# OpenCode Account Manager
 
-TUI app to manage OpenCode Antigravity Auth accounts. View rate limits, bulk enable/disable, delete, import/export accounts.
+TUI Dashboard for [OpenCode](https://opencode.ai) - View and manage all your providers, MCP servers, and plugin accounts in one place.
 
 ## Features
 
-- View all accounts with rate limit status
-- Bulk enable/disable accounts
-- Delete selected accounts
-- Export all or selected accounts to JSON
-- Import from Antigravity Manager folder
-- Import from JSON file
+- **Providers Overview**: See all configured AI providers (Google, Ollama, Claudible, etc.) with model counts
+- **MCP Servers Status**: View all MCP servers with enabled/disabled status
+- **Plugin Accounts**: Manage Antigravity Auth plugin accounts
+  - View rate limit status per model (claude, gemini, etc.)
+  - Enable/Disable accounts
+  - Delete accounts
+  - Export/Import accounts
+  - Import from Antigravity Manager folder
 
 ## Installation
 
 ```bash
+# Clone the repo
+git clone https://github.com/d-init-d/opencode-account-manager.git
+cd opencode-account-manager
+
+# Install dependencies
 npm install
+
+# Build
 npm run build
+
+# Link globally (optional)
+npm link
 ```
 
 ## Usage
 
 ```bash
-# Start TUI dashboard
-node dist/cli.js
-
-# Quick list accounts
-node dist/cli.js list
-
-# Export accounts
-node dist/cli.js export -o backup.json
-
-# Import from JSON file
-node dist/cli.js import ./backup.json
-
-# Import from AM folder
-node dist/cli.js import-am
+# Run dashboard
+ocam dashboard
+# or
+opencode-account-manager dashboard
+# or
+npm run dashboard
 ```
 
 ## Keyboard Shortcuts
 
-### Normal Mode
 | Key | Action |
 |-----|--------|
-| `R` | Refresh account list |
-| `E` | Export all accounts to JSON |
-| `I` | Import from file (shows CLI hint) |
-| `A` | Import from Antigravity Manager |
-| `S` | Enter Select Mode |
+| `Tab` | Switch between sections (Providers → Accounts → MCP) |
+| `R` | Refresh all data |
+| `S` | Toggle select mode (in Accounts section) |
+| `↑/↓` | Navigate accounts (in select mode) |
+| `Space` | Toggle account selection |
+| `A` | Select all accounts |
+| `N` | Select none |
+| `E` | Enable selected accounts |
+| `D` | Disable selected accounts |
+| `DEL` | Delete selected accounts |
+| `X` | Export selected accounts |
 | `Q` | Quit |
 
-### Select Mode
-| Key | Action |
-|-----|--------|
-| `↑` `↓` | Navigate up/down |
-| `SPACE` | Toggle checkbox |
-| `A` | Select all |
-| `N` | Deselect all |
-| `E` | Enable selected |
-| `D` | Disable selected |
-| `X` | Export selected only |
-| `DEL` | Delete selected |
-| `S` / `ESC` | Exit Select Mode |
+## Configuration Files
 
-## File Locations
+The app reads from these OpenCode configuration files:
 
-| File | Path |
-|------|------|
-| Plugin accounts | `~/.config/opencode/antigravity-accounts.json` |
-| AM accounts | `~/.antigravity_tools/` |
+| File | Location | Description |
+|------|----------|-------------|
+| `opencode.json` | `~/.config/opencode/` | Main OpenCode config (providers, MCP servers) |
+| `antigravity-accounts.json` | `%APPDATA%/opencode/` | Plugin accounts (Windows) |
 
-**Note:** OpenCode uses `~/.config/opencode/` on ALL platforms (including Windows).
+## Screenshots
 
-## Security
+```
+* OpenCode Account Manager - Dashboard
+────────────────────────────────────────────────────────────────
+Providers  Models  MCP On  MCP Off  Accounts  Available  Limited
+    4        29       6        0        5          3         2
 
-- Export files contain refresh tokens - treat as sensitive
-- Never commit export files to version control
+Sections: [1] Providers  [2] Accounts  [3] MCP  (Tab to switch)
+
+╭─ PROVIDERS ──────────────────────────────────────────────────╮
+│ PROVIDER            MODELS  TYPE      BASE URL              │
+│ Antigravity         7       builtin   -                     │
+│ Ollama              5       custom    http://localhost:11434│
+│ Claudible           3       custom    https://claudible.io  │
+│ Antigravity Manager 14      custom    http://localhost:8045 │
+╰──────────────────────────────────────────────────────────────╯
+
+╭─ PLUGIN ACCOUNTS (opencode-antigravity-auth) ─ (collapsed) ─╮
+╰──────────────────────────────────────────────────────────────╯
+
+╭─ MCP SERVERS ─────────────────────────────── (collapsed) ───╮
+╰──────────────────────────────────────────────────────────────╯
+```
 
 ## License
 

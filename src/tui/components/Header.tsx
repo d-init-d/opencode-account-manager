@@ -7,7 +7,7 @@ interface HeaderProps {
 }
 
 export function Header({
-  title = "Antigravity Sync",
+  title = "OpenCode Account Manager",
   subtitle,
 }: HeaderProps) {
   return (
@@ -19,7 +19,7 @@ export function Header({
         {subtitle && <Text dimColor> - {subtitle}</Text>}
       </Box>
       <Text dimColor>
-        ----------------------------------------------------------------
+        ────────────────────────────────────────────────────────────────
       </Text>
     </Box>
   );

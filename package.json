@@ -1,10 +1,11 @@
 {
-  "name": "antigravity-sync",
-  "version": "0.2.0",
-  "description": "TUI Dashboard for OpenCode Antigravity Auth Plugin - Manage accounts in terminal",
+  "name": "opencode-account-manager",
+  "version": "0.3.0",
+  "description": "TUI Dashboard for OpenCode - View providers, MCP servers, and plugin accounts",
   "main": "dist/cli.js",
   "bin": {
-    "antigravity-sync": "./dist/cli.js"
+    "ocam": "./dist/cli.js",
+    "opencode-account-manager": "./dist/cli.js"
   },
   "scripts": {
     "build": "npx tsc",
@@ -17,7 +18,9 @@
     "antigravity",
     "account-manager",
     "dashboard",
-    "tui"
+    "tui",
+    "mcp",
+    "providers"
   ],
   "author": "",
   "license": "MIT",
