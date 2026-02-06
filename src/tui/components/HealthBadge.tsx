@@ -21,15 +21,15 @@ const HEALTH_COLORS: Record<AccountHealthStatus, string> = {
 };
 
 const HEALTH_ICONS: Record<AccountHealthStatus, string> = {
-  ok: "✓",
-  verification_required: "⚠",
-  revoked: "✘",
-  disabled: "○",
-  deleted: "✖",
-  password_changed: "⌨",
-  network_error: "☁",
+  ok: "v",
+  verification_required: "!",
+  revoked: "x",
+  disabled: "-",
+  deleted: "x",
+  password_changed: "!",
+  network_error: "~",
   unknown_error: "?",
-  not_checked: "·",
+  not_checked: ".",
   not_configured: "-",
 };
 

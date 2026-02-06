@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Text } from "ink";
+import { Box, Text, useStdout } from "ink";
 import { Account, AccountHealthResult } from "../../core/types";
 import { normalizeHealthKey } from "../../core/config-store";
 import { HealthBadge } from "./HealthBadge";
@@ -193,12 +193,43 @@ export function DashboardView({ accounts, selectedIndex, healthResults }: Dashbo
     );
   }
 
-  const displayModels = getDisplayModels(accounts);
+  const { stdout } = useStdout();
+  const terminalColumns = stdout?.columns ?? 120;
+  const terminalRows = stdout?.rows ?? 30;
+
+  const allModels = getDisplayModels(accounts);
   const modelColumnWidth = 20;
-  const emailWidth = 28;
   const healthWidth = 2;
   const lastUsedWidth = 14;
-  const totalWidth = 3 + emailWidth + healthWidth + displayModels.length * modelColumnWidth + lastUsedWidth;
+  const scrollbarWidth = 1;
+
+  const innerWidth = Math.max(60, terminalColumns - 6);
+  const baseWidth = 3 + healthWidth + lastUsedWidth + scrollbarWidth;
+  const maxEmailWidth = Math.min(28, Math.max(12, innerWidth - baseWidth - modelColumnWidth));
+  const emailWidth = maxEmailWidth;
+  const remainingWidth = innerWidth - baseWidth - emailWidth;
+  const maxModels = Math.max(1, Math.floor(remainingWidth / modelColumnWidth));
+  const displayModels = allModels.slice(0, maxModels);
+  const totalWidth = baseWidth + emailWidth + displayModels.length * modelColumnWidth;
+
+  const maxRowsFromTerminal = Math.max(8, terminalRows - 18);
+  const visibleRows = Math.max(8, Math.min(maxRowsFromTerminal, accounts.length || 8));
+  const maxOffset = Math.max(0, accounts.length - visibleRows);
+  const scrollOffset = Math.max(0, Math.min(selectedIndex - Math.floor(visibleRows / 2), maxOffset));
+  const visibleAccounts = accounts.slice(scrollOffset, scrollOffset + visibleRows);
+  const paddedAccounts: Array<Account | undefined> = [
+    ...visibleAccounts,
+    ...Array.from({ length: Math.max(0, visibleRows - visibleAccounts.length) }, () => undefined),
+  ];
+
+  const showScrollbar = accounts.length > visibleRows;
+  const thumbSize = showScrollbar
+    ? Math.max(1, Math.round((visibleRows * visibleRows) / accounts.length))
+    : 0;
+  const maxThumbTop = Math.max(0, visibleRows - thumbSize);
+  const thumbTop = showScrollbar && maxOffset > 0
+    ? Math.round((scrollOffset / maxOffset) * maxThumbTop)
+    : 0;
 
   const healthCounts = healthResults
     ? accounts.reduce(
@@ -244,6 +275,9 @@ export function DashboardView({ accounts, selectedIndex, healthResults }: Dashbo
         <Box width={lastUsedWidth}>
           <Text dimColor bold>LAST USED</Text>
         </Box>
+        <Box width={scrollbarWidth}>
+          <Text dimColor>|</Text>
+        </Box>
       </Box>
 
       {/* Separator */}
@@ -252,19 +286,24 @@ export function DashboardView({ accounts, selectedIndex, healthResults }: Dashbo
       </Box>
 
       {/* Account rows */}
-      {accounts.map((account, index) => {
-        const isSelected = index === selectedIndex;
-        const isDisabled = account.enabled === false;
-        
-        // Truncate email
-        const email = account.email.length > emailWidth - 3 
-          ? account.email.slice(0, emailWidth - 6) + "..." 
-          : account.email;
+      {paddedAccounts.map((account, index) => {
+        const rowIndex = scrollOffset + index;
+        const isSelected = account ? rowIndex === selectedIndex : false;
+        const isDisabled = account ? account.enabled === false : false;
 
-        const health = healthResults?.[normalizeHealthKey(account.email)];
+        const email = account
+          ? (account.email.length > emailWidth - 3
+            ? account.email.slice(0, emailWidth - 6) + "..."
+            : account.email)
+          : "";
+
+        const health = account ? healthResults?.[normalizeHealthKey(account.email)] : undefined;
+        const scrollbarChar = showScrollbar
+          ? (index >= thumbTop && index < thumbTop + thumbSize ? "#" : "|")
+          : " ";
 
         return (
-          <Box key={account.email} paddingX={1}>
+          <Box key={account ? account.email : `empty-${index}`} paddingX={1}>
             {/* Selection cursor */}
             <Box width={3}>
               <Text bold={isSelected}>
@@ -276,7 +315,7 @@ export function DashboardView({ accounts, selectedIndex, healthResults }: Dashbo
             <Box width={emailWidth}>
               <Text 
                 bold={isSelected}
-                dimColor={isDisabled}
+                dimColor={isDisabled || !account}
               >
                 {email}
               </Text>
@@ -284,12 +323,19 @@ export function DashboardView({ accounts, selectedIndex, healthResults }: Dashbo
 
             {/* Health indicator */}
             <Box width={healthWidth}>
-              <HealthBadge result={health} compact={true} />
+              {account ? <HealthBadge result={health} compact={true} /> : <Text dimColor> </Text>}
             </Box>
             
             {/* Model columns */}
-
             {displayModels.map(model => {
+              if (!account) {
+                return (
+                  <Box key={model.key} width={modelColumnWidth}>
+                    <Text dimColor>{" ".repeat(modelColumnWidth - 1)}</Text>
+                  </Box>
+                );
+              }
+
               const status = getModelStatus(account, model.key);
               
               if (isDisabled) {
@@ -309,7 +355,10 @@ export function DashboardView({ accounts, selectedIndex, healthResults }: Dashbo
               );
             })}
             <Box width={lastUsedWidth}>
-              <Text dimColor>{formatLastUsed(account.lastUsed)}</Text>
+              <Text dimColor>{account ? formatLastUsed(account.lastUsed) : ""}</Text>
+            </Box>
+            <Box width={scrollbarWidth}>
+              <Text dimColor={showScrollbar}>{scrollbarChar}</Text>
             </Box>
           </Box>
         );
@@ -366,10 +415,10 @@ export function DashboardView({ accounts, selectedIndex, healthResults }: Dashbo
         <Text dimColor>████ 100%</Text>
         <Text dimColor>  ░░░░ limited  </Text>
         <Text dimColor>── disabled  </Text>
-        <Text color="green">✓</Text><Text dimColor> ok  </Text>
-        <Text color="yellow">⚠</Text><Text dimColor> verify  </Text>
-        <Text color="red">✘</Text><Text dimColor> error  </Text>
-        <Text dimColor>· unchecked</Text>
+        <Text color="green">v</Text><Text dimColor> ok  </Text>
+        <Text color="yellow">!</Text><Text dimColor> verify  </Text>
+        <Text color="red">x</Text><Text dimColor> error  </Text>
+        <Text dimColor>. unchecked</Text>
       </Box>
     </Box>
   );
