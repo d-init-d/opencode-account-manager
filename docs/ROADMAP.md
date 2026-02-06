@@ -75,10 +75,15 @@
 
 ### v0.6.5 - Security & CLI Improvements (Current)
 - [x] **Encrypted Export Default** - CLI export now defaults to encrypted format
-- [x] **Password Requirement** - `--password` required unless using `--plain`
+- [x] **Password Prompt** - Interactive password prompt or use `OCAM_EXPORT_PASSWORD` env var
+- [x] **Removed --password Flag** - No longer accepts `--password` on command line (security)
+- [x] **Plain Export Acknowledgment** - Plain export requires both `--plain` and `--i-understand` flags
 - [x] **Plaintext Warning** - Security warning shown when exporting without encryption
 - [x] **Config Parse Warnings** - CLI warns when opencode.json or ocam-config.json fails to parse
 - [x] **ExportedFrom Field** - Portable export now includes `exportedFrom: "opencode-account-manager"`
+- [x] **OAuth Endpoint Allowlist** - Only allows `https://oauth2.googleapis.com/token` by default
+- [x] **Custom Endpoint Override** - Set `OCAM_OAUTH_ALLOW_CUSTOM_ENDPOINT=true` to allow custom endpoints
+- [x] **clientSecret Warning** - Warns when clientSecret is stored in config file (should use env var)
 
 ### v0.6.4 - Account Health Check
 - [x] **Health Check Cache** - TTL + cooldown stored in ocam-config.json

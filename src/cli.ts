@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "fs";
 import path from "path";
+import readline from "readline";
 import { Command } from "commander";
 import chalk from "chalk";
 import {
@@ -20,7 +21,7 @@ import { checkAccountsHealth, HealthCheckResult } from "./core/health-orchestrat
 import { AccountHealthStatus, EncryptedExportFile } from "./core/types";
 import { version } from "../package.json";
 import { getLastOpencodeConfigError, clearLastOpencodeConfigError } from "./core/opencode-config";
-import { getLastConfigError, clearLastConfigError } from "./core/config-store";
+import { getLastConfigError, clearLastConfigError, checkOAuthClientSecretInConfig, checkCustomOAuthEndpointWarning } from "./core/config-store";
 import { encrypt } from "./core/crypto";
 
 function formatTimestamp(timestamp?: number): string {
@@ -112,6 +113,18 @@ function checkAndPrintConfigWarnings(): void {
   }
   if (appConfigError) {
     console.error(chalk.yellow(`Warning: Failed to parse ocam-config.json - ${appConfigError.message}`));
+  }
+
+  // Check for clientSecret in config (security warning)
+  const clientSecretWarning = checkOAuthClientSecretInConfig();
+  if (clientSecretWarning) {
+    console.error(chalk.yellow(clientSecretWarning));
+  }
+
+  // Check for custom OAuth endpoint without allow flag
+  const customEndpointWarning = checkCustomOAuthEndpointWarning();
+  if (customEndpointWarning) {
+    console.error(chalk.yellow(customEndpointWarning));
   }
 
   // Clear errors after reporting
@@ -209,14 +222,32 @@ program
     printHealthCheckResult(result);
   });
 
+function promptPassword(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    rl.question("Enter encryption password: ", (password) => {
+      rl.close();
+      if (!password || password.trim().length === 0) {
+        reject(new Error("Password cannot be empty"));
+      } else {
+        resolve(password.trim());
+      }
+    });
+  });
+}
+
 program
   .command("export")
   .description("Export accounts to a portable JSON file")
   .option("--plugin-path <path>", "Path to plugin accounts file")
   .option("-o, --out <path>", "Output file path")
-  .option("-p, --password <pwd>", "Password for encryption (required unless --plain)")
-  .option("--plain", "Export as plain JSON without encryption")
-  .action((options) => {
+  .option("--plain", "Export as plain JSON without encryption (requires --i-understand)")
+  .option("--i-understand", "Acknowledge security risk of plain text export")
+  .action(async (options) => {
     checkAndPrintConfigWarnings();
     const pluginPath = getPluginAccountsPath(options.pluginPath);
     const file = safeReadPluginFile(pluginPath);
@@ -227,10 +258,12 @@ program
     }
 
     const isPlain = options.plain === true;
+    const hasAcknowledgment = options.iUnderstand === true;
 
-    // Validate password requirement for encrypted export
-    if (!isPlain && !options.password) {
-      console.log(chalk.red("Error: Password is required for encrypted export. Use --password <pwd> or --plain for unencrypted export."));
+    // Plain export requires explicit acknowledgment
+    if (isPlain && !hasAcknowledgment) {
+      console.log(chalk.red("Error: Plain text export requires --i-understand flag to acknowledge security risks."));
+      console.log(chalk.yellow("Warning: Plain text export will expose your account credentials in the output file."));
       process.exit(1);
     }
 
@@ -243,15 +276,28 @@ program
       // Plain text export with warning
       console.log(chalk.yellow("\n⚠️  WARNING: Exporting in PLAIN TEXT format."));
       console.log(chalk.yellow("    Your account credentials will be visible in the output file."));
-      console.log(chalk.yellow("    Consider using encrypted export for better security.\n"));
+      console.log(chalk.yellow("    This is insecure and should only be used for testing/development.\n"));
 
       const exportFile = buildPortableExport(file.accounts);
       writeJsonFile(outPath, exportFile);
       console.log(chalk.green(`Exported ${file.accounts.length} accounts to ${outPath}`));
     } else {
+      // Encrypted export - get password from env or prompt
+      let password = process.env.OCAM_EXPORT_PASSWORD;
+
+      if (!password) {
+        try {
+          password = await promptPassword();
+        } catch (err) {
+          console.log(chalk.red("Error: Password is required for encrypted export."));
+          console.log(chalk.gray("Tip: Set OCAM_EXPORT_PASSWORD environment variable to avoid interactive prompt."));
+          process.exit(1);
+        }
+      }
+
       // Encrypted export
       const portableData = buildPortableExport(file.accounts);
-      const encryptedData = encrypt(portableData, options.password);
+      const encryptedData = encrypt(portableData, password);
 
       const encryptedExport: EncryptedExportFile = {
         version: 1,

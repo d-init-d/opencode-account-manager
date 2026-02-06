@@ -30,7 +30,7 @@ import {
   getLastOpencodeConfigError,
   clearLastOpencodeConfigError,
 } from "../core/opencode-config";
-import { getLastConfigError, clearLastConfigError } from "../core/config-store";
+import { getLastConfigError, clearLastConfigError, checkOAuthClientSecretInConfig, checkCustomOAuthEndpointWarning } from "../core/config-store";
 import { checkAccountsHealth } from "../core/health-orchestrator";
 import { getHealthCache, normalizeHealthKey } from "../core/config-store";
 
@@ -104,6 +104,18 @@ export function Dashboard({ pluginPath }: DashboardProps) {
       setConfigError(`ocam-config.json: ${appConfigError.message}`);
     } else {
       setConfigError(null);
+    }
+
+    // Check for clientSecret in config (security warning)
+    const clientSecretWarning = checkOAuthClientSecretInConfig();
+    if (clientSecretWarning) {
+      setConfigError(clientSecretWarning);
+    }
+
+    // Check for custom OAuth endpoint without allow flag
+    const customEndpointWarning = checkCustomOAuthEndpointWarning();
+    if (customEndpointWarning) {
+      setConfigError(customEndpointWarning);
     }
   };
 

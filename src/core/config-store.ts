@@ -8,6 +8,7 @@ import {
   HealthSettings,
 } from "./types";
 import { toLowerTrim } from "./utils";
+import { getCustomEndpointWarning } from "./health-oauth";
 
 // ============================================================================
 // Types
@@ -205,6 +206,42 @@ export function updateHealthSettings(partial: HealthSettings): void {
 export function getHealthOAuthConfig(): HealthOAuthConfig | undefined {
   const config = readConfig();
   return config.health?.oauth;
+}
+
+/**
+ * Check if clientSecret is stored in config file (security risk)
+ * Returns warning message if found, undefined otherwise
+ */
+export function checkOAuthClientSecretInConfig(): string | undefined {
+  const config = readConfig();
+  const oauthConfig = config.health?.oauth;
+  if (oauthConfig?.clientSecret) {
+    return "Warning: OAuth clientSecret should not be stored in ocam-config.json. Please use OCAM_OAUTH_CLIENT_SECRET environment variable instead.";
+  }
+  return undefined;
+}
+
+/**
+ * Check if custom OAuth endpoint is configured but not allowed
+ * Returns warning message if custom endpoint is blocked, undefined otherwise
+ */
+export function checkCustomOAuthEndpointWarning(): string | undefined {
+  const config = readConfig();
+  const oauthConfig = config.health?.oauth;
+  const envEndpoint = process.env.OCAM_OAUTH_TOKEN_ENDPOINT;
+  const configEndpoint = oauthConfig?.tokenEndpoint;
+  
+  // Check env variable first (takes precedence)
+  if (envEndpoint) {
+    return getCustomEndpointWarning(envEndpoint);
+  }
+  
+  // Then check config
+  if (configEndpoint) {
+    return getCustomEndpointWarning(configEndpoint);
+  }
+  
+  return undefined;
 }
 
 export function updateHealthOAuthConfig(partial: HealthOAuthConfig): void {

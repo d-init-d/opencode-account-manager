@@ -102,10 +102,12 @@ opencode-account-manager
 ocam list
 
 # Export accounts (mã hóa mặc định)
-ocam export -o backup.ocam --password "your-password"
+ocam export -o backup.ocam
+# Hoặc dùng biến môi trường (non-interactive)
+OCAM_EXPORT_PASSWORD="your-password" ocam export -o backup.ocam
 
-# Export dạng plain JSON (hiển thị cảnh báo bảo mật)
-ocam export -o backup.json --plain
+# Export dạng plain JSON (cần xác nhận)
+ocam export -o backup.json --plain --i-understand
 
 # Import accounts
 ocam import backup.ocam
@@ -126,7 +128,11 @@ ocam check --force
 ocam --help
 ```
 
-> **Lưu ý bảo mật**: CLI export giờ mặc định mã hóa. Dùng `--password` để đặt mật khẩu, hoặc `--plain` để export không mã hóa (sẽ hiện cảnh báo).
+> **Lưu ý bảo mật**:
+> - CLI export mặc định dùng mã hóa (AES-256-GCM)
+> - Mật khẩu có thể nhập qua biến môi trường `OCAM_EXPORT_PASSWORD` hoặc prompt tương tác
+> - Flag `--password` đã bị xóa để bảo mật (tránh lộ mật khẩu trong shell history)
+> - Export dạng plain cần cả hai flag `--plain` và `--i-understand`
 
 **Cấu hình OAuth cho Health Check**
 Thiết lập credentials qua biến môi trường:
@@ -136,6 +142,11 @@ OCAM_OAUTH_CLIENT_ID=...
 OCAM_OAUTH_CLIENT_SECRET=...
 OCAM_OAUTH_TOKEN_ENDPOINT=https://oauth2.googleapis.com/token
 ```
+
+**Cấu hình bảo mật**
+- **OAuth Endpoint Allowlist**: Chỉ cho phép `https://oauth2.googleapis.com/token` mặc định
+- **Custom Endpoints**: Đặt `OCAM_OAUTH_ALLOW_CUSTOM_ENDPOINT=true` để dùng endpoint khác
+- **clientSecret Storage**: OCAM cảnh báo nếu `clientSecret` lưu trong file config (nên dùng biến môi trường)
 
 ---
 
@@ -237,6 +248,27 @@ Warning: Failed to parse ocam-config.json - ...
 ```
 
 Các cảnh báo này xuất hiện khi khởi động CLI và giúp xác định vấn đề cấu hình.
+
+### Cảnh báo bảo mật
+
+**clientSecret trong file Config**
+```
+Warning: OAuth clientSecret should not be stored in ocam-config.json.
+Please use OCAM_OAUTH_CLIENT_SECRET environment variable instead.
+```
+
+**Custom OAuth Endpoint không được cho phép**
+```
+Warning: Custom OAuth token endpoint "..." is not in the allowlist.
+Set OCAM_OAUTH_ALLOW_CUSTOM_ENDPOINT=true to allow custom endpoints.
+```
+
+**Cảnh báo Export Plain Text**
+```
+⚠️  WARNING: Exporting in PLAIN TEXT format.
+    Your account credentials will be visible in the output file.
+    This is insecure and should only be used for testing/development.
+```
 
 ---
 

@@ -9,6 +9,14 @@ import { getHealthOAuthConfig } from "./config-store";
 const DEFAULT_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
 const REQUEST_TIMEOUT_MS = 10000;
 
+// Allowlist for OAuth token endpoints (security)
+const ALLOWED_TOKEN_ENDPOINTS = [
+  "https://oauth2.googleapis.com/token",
+];
+
+// Environment variable to allow custom endpoints
+const ALLOW_CUSTOM_ENDPOINT_ENV = "OCAM_OAUTH_ALLOW_CUSTOM_ENDPOINT";
+
 interface OAuthErrorResponse {
   error?: string;
   error_description?: string;
@@ -21,10 +29,75 @@ interface OAuthSuccessResponse {
   token_type?: string;
 }
 
+/**
+ * Check if custom endpoints are allowed via environment variable
+ */
+export function isCustomEndpointAllowed(): boolean {
+  const envValue = process.env[ALLOW_CUSTOM_ENDPOINT_ENV];
+  return envValue === "true" || envValue === "1";
+}
+
+/**
+ * Validate if a token endpoint is in the allowlist
+ */
+export function isTokenEndpointAllowed(endpoint: string): boolean {
+  // Always allow default endpoint
+  if (endpoint === DEFAULT_TOKEN_ENDPOINT) {
+    return true;
+  }
+  // Check allowlist
+  if (ALLOWED_TOKEN_ENDPOINTS.includes(endpoint)) {
+    return true;
+  }
+  // Check if custom endpoints are allowed via env
+  if (isCustomEndpointAllowed()) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Get the list of allowed token endpoints for display
+ */
+export function getAllowedTokenEndpoints(): string[] {
+  return [...ALLOWED_TOKEN_ENDPOINTS];
+}
+
+/**
+ * Get warning message if custom endpoint is configured but not allowed
+ */
+export function getCustomEndpointWarning(configuredEndpoint?: string): string | undefined {
+  if (!configuredEndpoint) {
+    return undefined;
+  }
+  
+  const endpoint = configuredEndpoint.trim();
+  
+  // Skip if it's the default endpoint
+  if (endpoint === DEFAULT_TOKEN_ENDPOINT) {
+    return undefined;
+  }
+  
+  // Skip if it's in the allowlist
+  if (ALLOWED_TOKEN_ENDPOINTS.includes(endpoint)) {
+    return undefined;
+  }
+  
+  // Check if custom endpoints are allowed
+  if (isCustomEndpointAllowed()) {
+    return undefined;
+  }
+  
+  return `Warning: Custom OAuth token endpoint "${endpoint}" is not in the allowlist. ` +
+    `Set ${ALLOW_CUSTOM_ENDPOINT_ENV}=true to allow custom endpoints. ` +
+    `Allowed endpoints: ${ALLOWED_TOKEN_ENDPOINTS.join(", ")}`;
+}
+
 function resolveOAuthConfig(): HealthOAuthConfig | undefined {
   const config = getHealthOAuthConfig() || {};
   const clientId = process.env.OCAM_OAUTH_CLIENT_ID || config.clientId;
-  const clientSecret = process.env.OCAM_OAUTH_CLIENT_SECRET || config.clientSecret;
+  // SECURITY: Only read clientSecret from environment variable, never from config file
+  const clientSecret = process.env.OCAM_OAUTH_CLIENT_SECRET;
   const tokenEndpoint = process.env.OCAM_OAUTH_TOKEN_ENDPOINT || config.tokenEndpoint;
   if (!clientId || !clientSecret) return undefined;
   return {
@@ -128,6 +201,14 @@ export async function checkAccountHealthOAuth(
   if (!tokenEndpoint.startsWith("https://")) {
     return buildResult("not_configured", "oauth", {
       message: "Token endpoint must use HTTPS protocol",
+    });
+  }
+
+  // Enforce allowlist for token endpoints
+  if (!isTokenEndpointAllowed(tokenEndpoint)) {
+    return buildResult("not_configured", "oauth", {
+      message: `Token endpoint "${tokenEndpoint}" is not in the allowlist. ` +
+        `Set ${ALLOW_CUSTOM_ENDPOINT_ENV}=true to allow custom endpoints.`,
     });
   }
   const body = buildOAuthRequestBody(refreshToken, config);
