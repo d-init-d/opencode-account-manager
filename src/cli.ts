@@ -17,7 +17,11 @@ import { importFromAmFolder, isAmFolder } from "./core/importers/amJson";
 import { writeJsonFile } from "./core/utils";
 import { startTuiDashboard } from "./tui";
 import { checkAccountsHealth, HealthCheckResult } from "./core/health-orchestrator";
-import { AccountHealthStatus } from "./core/types";
+import { AccountHealthStatus, EncryptedExportFile } from "./core/types";
+import { version } from "../package.json";
+import { getLastOpencodeConfigError, clearLastOpencodeConfigError } from "./core/opencode-config";
+import { getLastConfigError, clearLastConfigError } from "./core/config-store";
+import { encrypt } from "./core/crypto";
 
 function formatTimestamp(timestamp?: number): string {
   if (!timestamp) return "-";
@@ -96,6 +100,25 @@ function safeReadPluginFile(pluginPath: string) {
   }
 }
 
+/**
+ * Check for config parse errors and print warning to stderr
+ */
+function checkAndPrintConfigWarnings(): void {
+  const opencodeError = getLastOpencodeConfigError();
+  const appConfigError = getLastConfigError();
+
+  if (opencodeError) {
+    console.error(chalk.yellow(`Warning: Failed to parse opencode.json - ${opencodeError.message}`));
+  }
+  if (appConfigError) {
+    console.error(chalk.yellow(`Warning: Failed to parse ocam-config.json - ${appConfigError.message}`));
+  }
+
+  // Clear errors after reporting
+  clearLastOpencodeConfigError();
+  clearLastConfigError();
+}
+
 function parseEmailList(input?: string): string[] | undefined {
   if (!input) return undefined;
   const items = input
@@ -110,7 +133,7 @@ const program = new Command();
 program
   .name("ocam")
   .description("OpenCode Account Manager - TUI dashboard and CLI for managing accounts")
-  .version("0.5.3");
+  .version(version);
 
 // Default command - show dashboard
 program
@@ -128,6 +151,7 @@ program
   .description("List plugin accounts")
   .option("--plugin-path <path>", "Path to plugin accounts file")
   .action((options) => {
+    checkAndPrintConfigWarnings();
     const pluginPath = getPluginAccountsPath(options.pluginPath);
     const file = safeReadPluginFile(pluginPath);
     const summary = summarizeAccounts(file.accounts);
@@ -159,6 +183,7 @@ program
   .option("--emails <emails>", "Comma-separated list of emails to check")
   .option("--force", "Bypass cache and cooldown checks", false)
   .action(async (options) => {
+    checkAndPrintConfigWarnings();
     const pluginPath = getPluginAccountsPath(options.pluginPath);
     const file = safeReadPluginFile(pluginPath);
     const emails = parseEmailList(options.emails);
@@ -188,19 +213,62 @@ program
   .command("export")
   .description("Export accounts to a portable JSON file")
   .option("--plugin-path <path>", "Path to plugin accounts file")
-  .option("-o, --out <path>", "Output file path", `antigravity-export-${Date.now()}.json`)
+  .option("-o, --out <path>", "Output file path")
+  .option("-p, --password <pwd>", "Password for encryption (required unless --plain)")
+  .option("--plain", "Export as plain JSON without encryption")
   .action((options) => {
+    checkAndPrintConfigWarnings();
     const pluginPath = getPluginAccountsPath(options.pluginPath);
     const file = safeReadPluginFile(pluginPath);
-    
+
     if (file.accounts.length === 0) {
       console.log(chalk.yellow("No accounts to export."));
       return;
     }
 
-    const exportFile = buildPortableExport(file.accounts);
-    writeJsonFile(options.out, exportFile);
-    console.log(chalk.green(`Exported ${file.accounts.length} accounts to ${options.out}`));
+    const isPlain = options.plain === true;
+
+    // Validate password requirement for encrypted export
+    if (!isPlain && !options.password) {
+      console.log(chalk.red("Error: Password is required for encrypted export. Use --password <pwd> or --plain for unencrypted export."));
+      process.exit(1);
+    }
+
+    // Determine output file path
+    const defaultExt = isPlain ? ".json" : ".ocam";
+    const defaultName = `antigravity-export-${Date.now()}${defaultExt}`;
+    const outPath = options.out || defaultName;
+
+    if (isPlain) {
+      // Plain text export with warning
+      console.log(chalk.yellow("\n⚠️  WARNING: Exporting in PLAIN TEXT format."));
+      console.log(chalk.yellow("    Your account credentials will be visible in the output file."));
+      console.log(chalk.yellow("    Consider using encrypted export for better security.\n"));
+
+      const exportFile = buildPortableExport(file.accounts);
+      writeJsonFile(outPath, exportFile);
+      console.log(chalk.green(`Exported ${file.accounts.length} accounts to ${outPath}`));
+    } else {
+      // Encrypted export
+      const portableData = buildPortableExport(file.accounts);
+      const encryptedData = encrypt(portableData, options.password);
+
+      const encryptedExport: EncryptedExportFile = {
+        version: 1,
+        format: "encrypted",
+        algorithm: "aes-256-gcm",
+        salt: encryptedData.salt,
+        iv: encryptedData.iv,
+        authTag: encryptedData.authTag,
+        data: encryptedData.data,
+        exportedAt: portableData.exportedAt,
+        accountCount: file.accounts.length,
+        exportedFrom: "opencode-account-manager",
+      };
+
+      writeJsonFile(outPath, encryptedExport);
+      console.log(chalk.green(`Exported ${file.accounts.length} accounts to ${outPath} (encrypted)`));
+    }
   });
 
 program
@@ -210,6 +278,7 @@ program
   .option("--plugin-path <path>", "Path to plugin accounts file")
   .option("-m, --mode <merge|replace>", "Import mode", "merge")
   .action((source, options) => {
+    checkAndPrintConfigWarnings();
     const pluginPath = getPluginAccountsPath(options.pluginPath);
     const mode = options.mode === "replace" ? "replace" : "merge";
     const existingFile = safeReadPluginFile(pluginPath);
@@ -278,6 +347,7 @@ program
   .option("--plugin-path <path>", "Path to plugin accounts file")
   .option("-m, --mode <merge|replace>", "Import mode", "merge")
   .action((options) => {
+    checkAndPrintConfigWarnings();
     const pluginPath = getPluginAccountsPath(options.pluginPath);
     const result = importFromAmFolder(options.amPath);
 

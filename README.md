@@ -101,11 +101,14 @@ opencode-account-manager
 # List accounts
 ocam list
 
-# Export accounts
-ocam export -o backup.json
+# Export accounts (encrypted by default)
+ocam export -o backup.ocam --password "your-password"
+
+# Export as plain JSON (shows security warning)
+ocam export -o backup.json --plain
 
 # Import accounts
-ocam import backup.json
+ocam import backup.ocam
 
 # Import from Antigravity Manager folder
 ocam import-am
@@ -122,6 +125,8 @@ ocam check --force
 # Help
 ocam --help
 ```
+
+> **Security Note**: CLI export now defaults to encrypted format. Use `--password` to set encryption password, or `--plain` for unencrypted export (will show warning).
 
 **Health Check OAuth Config**
 Set OAuth client credentials via environment variables:
@@ -169,9 +174,11 @@ OCAM_OAUTH_TOKEN_ENDPOINT=https://oauth2.googleapis.com/token
 | Format | Extension | Description |
 |--------|-----------|-------------|
 | Encrypted | `.ocam` | AES-256-GCM encrypted, password required |
-| Portable | `.json` | OpenCode Account Manager plain export |
+| Portable | `.json` | OpenCode Account Manager plain export (⚠️ shows security warning) |
 | AM Export | `.json` | Antigravity Manager app export `[{email, refresh_token}]` |
 | Plugin Native | `.json` | `antigravity-accounts.json` format |
+
+> **Security Warning**: Plaintext exports (`.json`) will display a warning about credential visibility. Encrypted exports (`.ocam`) are recommended for production use.
 
 ---
 
@@ -219,6 +226,17 @@ Reinstall the package:
 npm uninstall -g opencode-account-manager
 npm install -g opencode-account-manager
 ```
+
+### Config Parse Warnings
+
+OCAM now warns when config files fail to parse:
+
+```
+Warning: Failed to parse opencode.json - Unexpected token ...
+Warning: Failed to parse ocam-config.json - ...
+```
+
+These warnings appear on CLI startup and help identify configuration issues.
 
 ---
 

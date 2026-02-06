@@ -11,6 +11,7 @@ import fs from "fs";
 import path from "path";
 import { Account } from "../types";
 import { getAmFolderPath } from "../paths";
+import { generateFingerprint } from "../fingerprint";
 
 interface AMIndexEntry {
   id: string;
@@ -48,43 +49,6 @@ interface AMAccountDetail {
   proxy_disabled?: boolean;
   created_at?: number;
   last_used?: number;
-}
-
-function generateFingerprint() {
-  const randomHex = (len: number) => {
-    let result = "";
-    for (let i = 0; i < len; i++) {
-      result += Math.floor(Math.random() * 16).toString(16);
-    }
-    return result;
-  };
-
-  const platforms = ["win32/x64", "win32/arm64", "darwin/x64", "darwin/arm64"];
-  const ides = ["ANDROID_STUDIO", "INTELLIJ", "IDE_UNSPECIFIED"];
-  const clients = [
-    "google-cloud-sdk android-studio/2024.1",
-    "google-cloud-sdk intellij/2024.1",
-    "google-cloud-sdk vscode/1.87.0",
-  ];
-
-  const platform = platforms[Math.floor(Math.random() * platforms.length)];
-
-  return {
-    deviceId: crypto.randomUUID(),
-    sessionToken: randomHex(32),
-    userAgent: `antigravity/1.15.8 ${platform}`,
-    apiClient: clients[Math.floor(Math.random() * clients.length)],
-    clientMetadata: {
-      ideType: ides[Math.floor(Math.random() * ides.length)],
-      platform: platform.startsWith("darwin") ? "MACOS" : "WINDOWS",
-      pluginType: "GEMINI",
-      osVersion: platform.startsWith("darwin") ? "14.2.1" : "10.0.19042",
-      arch: platform.split("/")[1],
-      sqmId: `{${crypto.randomUUID().toUpperCase()}}`,
-    },
-    quotaUser: `device-${randomHex(16)}`,
-    createdAt: Date.now(),
-  };
 }
 
 export interface ImportFromAmResult {

@@ -13,12 +13,49 @@ import { toLowerTrim } from "./utils";
 // Types
 // ============================================================================
 
+export interface ConfigError {
+  file: string;
+  message: string;
+  timestamp: number;
+}
+
 export interface AppConfig {
   lastExportFolder?: string;
   lastImportFolder?: string;
   defaultExportFormat?: "encrypted" | "plain";
   recentFolders?: string[];
   health?: HealthConfig;
+}
+
+// ============================================================================
+// Error State
+// ============================================================================
+
+let lastConfigError: ConfigError | null = null;
+
+/**
+ * Get the last config parse error, if any
+ */
+export function getLastConfigError(): ConfigError | null {
+  return lastConfigError;
+}
+
+/**
+ * Clear the last config error
+ */
+export function clearLastConfigError(): void {
+  lastConfigError = null;
+}
+
+/**
+ * Set a config parse error
+ */
+function setConfigError(file: string, message: string): void {
+  lastConfigError = {
+    file,
+    message,
+    timestamp: Date.now(),
+  };
 }
 
 // ============================================================================
@@ -62,7 +99,7 @@ export function getConfigPath(): string {
  */
 export function readConfig(): AppConfig {
   const configPath = getConfigPath();
-  
+
   if (!fs.existsSync(configPath)) {
     return {};
   }
@@ -70,7 +107,9 @@ export function readConfig(): AppConfig {
   try {
     const content = fs.readFileSync(configPath, "utf-8");
     return JSON.parse(content) as AppConfig;
-  } catch {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown parse error";
+    setConfigError(configPath, message);
     return {};
   }
 }

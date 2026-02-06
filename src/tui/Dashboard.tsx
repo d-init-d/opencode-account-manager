@@ -27,7 +27,10 @@ import {
   parseOpencodeInfo,
   getConfigSummary,
   OpencodeInfo,
+  getLastOpencodeConfigError,
+  clearLastOpencodeConfigError,
 } from "../core/opencode-config";
+import { getLastConfigError, clearLastConfigError } from "../core/config-store";
 import { checkAccountsHealth } from "../core/health-orchestrator";
 import { getHealthCache, normalizeHealthKey } from "../core/config-store";
 
@@ -58,6 +61,7 @@ export function Dashboard({ pluginPath }: DashboardProps) {
   const [summary, setSummary] = useState({ total: 0, available: 0, limited: 0 });
   const [message, setMessage] = useState<string | null>(null);
   const [healthResults, setHealthResults] = useState<Record<string, AccountHealthResult>>({});
+  const [configError, setConfigError] = useState<string | null>(null);
   
   // Main tab state
   const [activeTab, setActiveTab] = useState<MainTab>("dashboard");
@@ -83,8 +87,24 @@ export function Dashboard({ pluginPath }: DashboardProps) {
   };
 
   const loadOpencodeConfig = () => {
+    // Clear previous errors
+    clearLastOpencodeConfigError();
+    clearLastConfigError();
+
     const info = parseOpencodeInfo();
     setOpencodeInfo(info);
+
+    // Check for config errors
+    const opencodeError = getLastOpencodeConfigError();
+    const appConfigError = getLastConfigError();
+
+    if (opencodeError) {
+      setConfigError(`opencode.json: ${opencodeError.message}`);
+    } else if (appConfigError) {
+      setConfigError(`ocam-config.json: ${appConfigError.message}`);
+    } else {
+      setConfigError(null);
+    }
   };
 
   const loadAccounts = () => {
@@ -562,6 +582,13 @@ export function Dashboard({ pluginPath }: DashboardProps) {
         ]}
       />
 
+
+      {/* Config error warning */}
+      {configError ? (
+        <Box marginY={1} paddingX={1}>
+          <Text color="red" bold>⚠ Config Error: {configError}</Text>
+        </Box>
+      ) : null}
 
       {/* Help bar */}
       <Box marginY={1}>

@@ -123,6 +123,13 @@ export async function checkAccountHealthOAuth(
   }
 
   const tokenEndpoint = config.tokenEndpoint || DEFAULT_TOKEN_ENDPOINT;
+
+  // Enforce HTTPS-only token endpoints for security
+  if (!tokenEndpoint.startsWith("https://")) {
+    return buildResult("not_configured", "oauth", {
+      message: "Token endpoint must use HTTPS protocol",
+    });
+  }
   const body = buildOAuthRequestBody(refreshToken, config);
 
   return new Promise<AccountHealthResult>((resolve) => {

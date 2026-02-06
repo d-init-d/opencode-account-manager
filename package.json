@@ -1,6 +1,6 @@
 {
   "name": "opencode-account-manager",
-  "version": "0.6.7",
+  "version": "0.6.8",
   "description": "TUI Dashboard for OpenCode - View providers, MCP servers, and plugin accounts",
   "main": "dist/cli.js",
   "bin": {
@@ -11,7 +11,8 @@
     "build": "npx tsc",
     "dev": "npx tsc -w",
     "start": "node dist/cli.js",
-    "dashboard": "node dist/cli.js dashboard"
+    "dashboard": "node dist/cli.js dashboard",
+    "test": "npm run build && node --test tests/*.test.js"
   },
   "keywords": [
     "opencode",

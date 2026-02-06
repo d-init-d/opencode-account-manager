@@ -56,6 +56,40 @@ export interface OpencodeConfig {
 }
 
 // ============================================================================
+// Error State
+// ============================================================================
+
+export interface ConfigError {
+  file: string;
+  message: string;
+  timestamp: number;
+}
+
+let lastConfigError: ConfigError | null = null;
+
+/**
+ * Get the last opencode.json parse error, if any
+ */
+export function getLastOpencodeConfigError(): ConfigError | null {
+  return lastConfigError;
+}
+
+/**
+ * Clear the last opencode.json error
+ */
+export function clearLastOpencodeConfigError(): void {
+  lastConfigError = null;
+}
+
+function setConfigError(file: string, message: string): void {
+  lastConfigError = {
+    file,
+    message,
+    timestamp: Date.now(),
+  };
+}
+
+// ============================================================================
 // Parsed/Display structures
 // ============================================================================
 
@@ -114,7 +148,7 @@ export function getOpencodeConfigPath(): string {
  */
 export function readOpencodeConfig(configPath?: string): OpencodeConfig | null {
   const resolvedPath = configPath || getOpencodeConfigPath();
-  
+
   if (!fs.existsSync(resolvedPath)) {
     return null;
   }
@@ -122,7 +156,9 @@ export function readOpencodeConfig(configPath?: string): OpencodeConfig | null {
   try {
     const content = fs.readFileSync(resolvedPath, "utf-8");
     return JSON.parse(content) as OpencodeConfig;
-  } catch {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown parse error";
+    setConfigError(resolvedPath, message);
     return null;
   }
 }

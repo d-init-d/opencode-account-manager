@@ -73,7 +73,14 @@
 - [x] **Step Messages** - "Loading OpenCode config...", "Loading accounts...", "Done!"
 - [x] **R Key Shortcut** - Added R to help bar for quick refresh
 
-### v0.6.4 - Account Health Check (Current)
+### v0.6.5 - Security & CLI Improvements (Current)
+- [x] **Encrypted Export Default** - CLI export now defaults to encrypted format
+- [x] **Password Requirement** - `--password` required unless using `--plain`
+- [x] **Plaintext Warning** - Security warning shown when exporting without encryption
+- [x] **Config Parse Warnings** - CLI warns when opencode.json or ocam-config.json fails to parse
+- [x] **ExportedFrom Field** - Portable export now includes `exportedFrom: "opencode-account-manager"`
+
+### v0.6.4 - Account Health Check
 - [x] **Health Check Cache** - TTL + cooldown stored in ocam-config.json
 - [x] **OAuth Validation** - Refresh token check with status mapping
 - [x] **Log Hints** - Parse antigravity-logs for verification errors
@@ -90,6 +97,21 @@
 | H | Check account health |
 | P | Open Action Palette |
 | Q | Quit |
+
+---
+
+## Test & CI Status
+
+### Test Coverage
+- [x] **Unit Tests** - Crypto, account merging, format detection
+- [x] **Import Tests** - Encrypted, plain, AM export formats
+- [x] **Health Check Tests** - OAuth validation, cache logic
+- [x] **Config Tests** - Parse warnings, error handling
+
+### CI/CD
+- [x] **Build Verification** - TypeScript compilation
+- [x] **Test Execution** - Automated test suite
+- [x] **Lint Checks** - Code style validation
 
 ---
 

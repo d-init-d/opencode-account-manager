@@ -6,7 +6,7 @@ import {
   setHealthCacheEntry,
 } from "./config-store";
 import { checkAccountHealthOAuth } from "./health-oauth";
-import { collectLogHealthResults, mergeAccountHealth } from "./health-log";
+import { collectLogHealthResults, mergeAccountHealth, redactMessage } from "./health-log";
 
 export type HealthSkipReason = "no_refresh_token" | "cooldown" | "disabled";
 
@@ -168,17 +168,44 @@ export async function checkAccountsHealth(
       if (options.onProgress) {
         options.onProgress(completed, total, `Checking ${item.email}...`);
       }
-      
-      const oauthResult = await checkAccountHealthOAuth(item.refreshToken);
+
+      let oauthResult: AccountHealthResult;
+
+      try {
+        oauthResult = await checkAccountHealthOAuth(item.refreshToken);
+      } catch (error) {
+        const isNetworkError =
+          error instanceof Error &&
+          (error.message.includes("network") ||
+            error.message.includes("ECONNREFUSED") ||
+            error.message.includes("ETIMEDOUT") ||
+            error.message.includes("ENOTFOUND") ||
+            error.message.includes("socket") ||
+            error.message.includes("timeout"));
+
+        oauthResult = {
+          status: isNetworkError ? "network_error" : "unknown_error",
+          source: "oauth",
+          checkedAt: Date.now(),
+          message: error instanceof Error ? error.message : String(error),
+        };
+      }
+
       const key = normalizeHealthKey(item.email);
       const merged = mergeAccountHealth(oauthResult, logResults[key]) || oauthResult;
-      setHealthCacheEntry(item.email, merged);
-      
+      // Redact sensitive data before caching
+      const redactedResult: AccountHealthResult = {
+        ...merged,
+        message: redactMessage(merged.message),
+        errorDescription: redactMessage(merged.errorDescription),
+      };
+      setHealthCacheEntry(item.email, redactedResult);
+
       completed++;
       if (options.onProgress) {
         options.onProgress(completed, total, `Finished ${item.email}`);
       }
-      
+
       return { email: item.email, result: merged };
     }
   );

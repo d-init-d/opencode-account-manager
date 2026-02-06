@@ -8,6 +8,11 @@ const DEFAULT_MAX_FILES = 10;
 const DEFAULT_MAX_BYTES = 2 * 1024 * 1024;
 const EMAIL_REGEX = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 
+// Patterns for redacting sensitive data
+const TOKEN_REGEX = /token[=:]\s*["']?[a-zA-Z0-9_\-\.]+["']?/gi;
+const REFRESH_TOKEN_REGEX = /refresh_token[=:]\s*["']?[a-zA-Z0-9_\-\.]+["']?/gi;
+const LONG_EMAIL_REGEX = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
+
 const STATUS_PRIORITY: Record<AccountHealthStatus, number> = {
   verification_required: 9,
   disabled: 8,
@@ -170,4 +175,36 @@ export function mergeAccountHealth(
   secondary: AccountHealthResult | undefined
 ): AccountHealthResult | undefined {
   return mergeHealthResults(primary, secondary);
+}
+
+/**
+ * Redact sensitive information from a message before storing in cache.
+ * Hides tokens, refresh_tokens, and long email addresses.
+ */
+export function redactMessage(message: string | undefined): string | undefined {
+  if (!message) return message;
+
+  let redacted = message;
+
+  // Redact token=... or token: ... patterns
+  redacted = redacted.replace(TOKEN_REGEX, "token=***");
+
+  // Redact refresh_token=... or refresh_token: ... patterns
+  redacted = redacted.replace(REFRESH_TOKEN_REGEX, "refresh_token=***");
+
+  // Redact long email addresses (keep only first 3 chars and domain)
+  redacted = redacted.replace(LONG_EMAIL_REGEX, (email) => {
+    if (email.length > 20) {
+      const atIndex = email.indexOf("@");
+      if (atIndex > 0) {
+        const local = email.slice(0, Math.min(3, atIndex));
+        const domain = email.slice(atIndex);
+        return `${local}***${domain}`;
+      }
+      return email.slice(0, 3) + "***";
+    }
+    return email;
+  });
+
+  return redacted;
 }

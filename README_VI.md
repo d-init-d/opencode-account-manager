@@ -101,11 +101,14 @@ opencode-account-manager
 # Liệt kê accounts
 ocam list
 
-# Export accounts
-ocam export -o backup.json
+# Export accounts (mã hóa mặc định)
+ocam export -o backup.ocam --password "your-password"
+
+# Export dạng plain JSON (hiển thị cảnh báo bảo mật)
+ocam export -o backup.json --plain
 
 # Import accounts
-ocam import backup.json
+ocam import backup.ocam
 
 # Import từ thư mục Antigravity Manager
 ocam import-am
@@ -122,6 +125,8 @@ ocam check --force
 # Trợ giúp
 ocam --help
 ```
+
+> **Lưu ý bảo mật**: CLI export giờ mặc định mã hóa. Dùng `--password` để đặt mật khẩu, hoặc `--plain` để export không mã hóa (sẽ hiện cảnh báo).
 
 **Cấu hình OAuth cho Health Check**
 Thiết lập credentials qua biến môi trường:
@@ -169,9 +174,11 @@ OCAM_OAUTH_TOKEN_ENDPOINT=https://oauth2.googleapis.com/token
 | Định dạng | Đuôi file | Mô tả |
 |-----------|-----------|-------|
 | Mã hóa | `.ocam` | Mã hóa AES-256-GCM, cần mật khẩu |
-| Portable | `.json` | Export thuần từ OpenCode Account Manager |
+| Portable | `.json` | Export thuần từ OpenCode Account Manager (⚠️ hiển thị cảnh báo bảo mật) |
 | AM Export | `.json` | Export từ app Antigravity Manager `[{email, refresh_token}]` |
 | Plugin Native | `.json` | Định dạng `antigravity-accounts.json` |
+
+> **Cảnh báo bảo mật**: Export plaintext (`.json`) sẽ hiển thị cảnh báo về việc lộ credential. Export mã hóa (`.ocam`) được khuyến nghị cho môi trường production.
 
 ---
 
@@ -219,6 +226,17 @@ Cài lại package:
 npm uninstall -g opencode-account-manager
 npm install -g opencode-account-manager
 ```
+
+### Cảnh báo parse Config
+
+OCAM giờ cảnh báo khi file config không parse được:
+
+```
+Warning: Failed to parse opencode.json - Unexpected token ...
+Warning: Failed to parse ocam-config.json - ...
+```
+
+Các cảnh báo này xuất hiện khi khởi động CLI và giúp xác định vấn đề cấu hình.
 
 ---
 

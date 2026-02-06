@@ -19,13 +19,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isAccountCandidate(value: unknown): value is Account {
   if (!isRecord(value)) return false;
   if (typeof value.email !== "string") return false;
-  return value.email.includes("@");
+  if (!value.email.includes("@")) return false;
+  if (typeof value.refreshToken !== "string") return false;
+  if (value.refreshToken.trim() === "") return false;
+  return true;
 }
 
 function normalizeAccount(account: Account): Account {
   return {
     ...account,
-    email: account.email.trim(),
+    email: account.email.trim().toLowerCase(),
+    refreshToken: account.refreshToken!.trim(),
   };
 }
 
@@ -158,14 +162,14 @@ export function buildPortableExport(accounts: Account[]): PortableExportFile {
   return {
     version: 1,
     exportedAt: Date.now(),
-    exportedFrom: "antigravity-sync",
+    exportedFrom: "opencode-account-manager",
     accounts: accounts.map(normalizeAccount),
   };
 }
 
 export function detectImportFormat(data: unknown): ImportFormat | "unknown" {
   if (!isRecord(data)) return "unknown";
-  if (data.exportedFrom === "antigravity-sync") return "portable";
+  if (data.exportedFrom === "antigravity-sync" || data.exportedFrom === "opencode-account-manager") return "portable";
   if (typeof data.version === "number" && Array.isArray(data.accounts)) {
     return "plugin";
   }
