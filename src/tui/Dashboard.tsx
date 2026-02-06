@@ -21,13 +21,15 @@ import {
   writePluginAccountsFile,
 } from "../core/accounts";
 import { getPluginAccountsPath, getAmFolderPath } from "../core/paths";
-import { Account, PluginAccountsFile } from "../core/types";
+import { Account, AccountHealthResult, PluginAccountsFile } from "../core/types";
 import { importFromAmFolder } from "../core/importers/amJson";
 import {
   parseOpencodeInfo,
   getConfigSummary,
   OpencodeInfo,
 } from "../core/opencode-config";
+import { checkAccountsHealth } from "../core/health-orchestrator";
+import { getHealthCache, normalizeHealthKey } from "../core/config-store";
 
 interface DashboardProps {
   pluginPath?: string;
@@ -55,6 +57,7 @@ export function Dashboard({ pluginPath }: DashboardProps) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [summary, setSummary] = useState({ total: 0, available: 0, limited: 0 });
   const [message, setMessage] = useState<string | null>(null);
+  const [healthResults, setHealthResults] = useState<Record<string, AccountHealthResult>>({});
   
   // Main tab state
   const [activeTab, setActiveTab] = useState<MainTab>("dashboard");
@@ -91,6 +94,10 @@ export function Dashboard({ pluginPath }: DashboardProps) {
     setCheckedEmails(new Set());
   };
 
+  const loadHealthCache = () => {
+    setHealthResults(getHealthCache());
+  };
+
   const refresh = async () => {
     setIsLoading(true);
     
@@ -101,6 +108,7 @@ export function Dashboard({ pluginPath }: DashboardProps) {
     setLoadingStep("Loading accounts...");
     await new Promise(r => setTimeout(r, 100));
     loadAccounts();
+    loadHealthCache();
     
     setLoadingStep("Done!");
     await new Promise(r => setTimeout(r, 300));
@@ -110,9 +118,57 @@ export function Dashboard({ pluginPath }: DashboardProps) {
     showMessage("Refreshed", 2000);
   };
 
+  const runHealthCheck = async (emails?: string[]) => {
+    if (accounts.length === 0) {
+      showMessage("No accounts to check", 2000);
+      return;
+    }
+
+    setIsLoading(true);
+    setLoadingStep("Starting health check...");
+
+    try {
+      const result = await checkAccountsHealth(accounts, {
+        emails,
+        includeLogs: true,
+        force: false,
+        onProgress: (current, total, msg) => {
+          setLoadingStep(`[${current}/${total}] ${msg}`);
+        },
+      });
+
+      setHealthResults((prev) => {
+        const next = { ...prev };
+        for (const item of result.items) {
+          next[normalizeHealthKey(item.email)] = item.result;
+        }
+        return next;
+      });
+
+      showMessage(
+        `Health check: ${result.counts.checked} checked, ${result.counts.cached} cached, ${result.counts.skipped} skipped`,
+        5000
+      );
+    } catch (err) {
+      showMessage("Health check failed", 3000);
+    } finally {
+      setIsLoading(false);
+      setLoadingStep("");
+    }
+  };
+
+  const handleCheckHealthSelected = () => {
+    if (checkedEmails.size === 0) {
+      showMessage("No accounts selected", 2000);
+      return;
+    }
+    runHealthCheck(Array.from(checkedEmails));
+  };
+
   useEffect(() => {
     loadOpencodeConfig();
     loadAccounts();
+    loadHealthCache();
   }, []);
 
   // Build settings navigation items
@@ -137,10 +193,12 @@ export function Dashboard({ pluginPath }: DashboardProps) {
   // Palette actions
   const paletteActions: PaletteAction[] = [
     { id: "refresh", label: "Refresh", shortcut: "R" },
+    { id: "check-health-all", label: "Check Account Health (All)", shortcut: "H" },
     { id: "export", label: "Export All Accounts", shortcut: "E" },
     { id: "import", label: "Import from File", shortcut: "I" },
     { id: "import-am", label: "Import from Antigravity Manager", shortcut: "A" },
     ...(checkedEmails.size > 0 ? [
+      { id: "check-health-selected", label: `Check Health Selected (${checkedEmails.size})`, shortcut: "Shift+H" },
       { id: "export-selected", label: `Export Selected (${checkedEmails.size})`, shortcut: "X" },
       { id: "enable-selected", label: `Enable Selected (${checkedEmails.size})` },
       { id: "disable-selected", label: `Disable Selected (${checkedEmails.size})` },
@@ -175,6 +233,10 @@ export function Dashboard({ pluginPath }: DashboardProps) {
     }
     if (input === "r" || input === "R") {
       refresh();
+      return;
+    }
+    if (input === "h" || input === "H") {
+      runHealthCheck();
       return;
     }
 
@@ -268,6 +330,12 @@ export function Dashboard({ pluginPath }: DashboardProps) {
     switch (actionId) {
       case "refresh":
         refresh();
+        break;
+      case "check-health-all":
+        runHealthCheck();
+        break;
+      case "check-health-selected":
+        handleCheckHealthSelected();
         break;
       case "export":
         setActiveModal("export");
@@ -484,16 +552,24 @@ export function Dashboard({ pluginPath }: DashboardProps) {
           { label: "Accounts", value: summary.total, color: "white" },
           { label: "Available", value: summary.available, color: "white" },
           { label: "Limited", value: summary.limited, color: "gray" },
+          { 
+            label: "Need Verify", 
+            value: Object.values(healthResults).filter(r => r.status === "verification_required").length, 
+            color: "yellow" 
+          },
           { label: "Providers", value: configSummary?.providers || 0, color: "white" },
           { label: "MCP", value: configSummary?.mcpEnabled || 0, color: "white" },
         ]}
       />
+
 
       {/* Help bar */}
       <Box marginY={1}>
         <Text dimColor>↑↓ navigate • Space select • </Text>
         <Text bold>R</Text>
         <Text dimColor> refresh • </Text>
+        <Text bold>H</Text>
+        <Text dimColor> health • </Text>
         <Text bold>P</Text>
         <Text dimColor> actions • </Text>
         <Text bold>Q</Text>
@@ -517,9 +593,11 @@ export function Dashboard({ pluginPath }: DashboardProps) {
           <DashboardView 
             accounts={accounts} 
             selectedIndex={dashboardIndex}
+            healthResults={healthResults}
           />
         </Box>
       ) : (
+
         // Settings Tab - Original sections view
         <>
           <SectionBox 
@@ -540,6 +618,7 @@ export function Dashboard({ pluginPath }: DashboardProps) {
               selectedIndex={currentSettingsItem?.type === "account" ? (currentSettingsItem.index ?? -1) : -1}
               checkedEmails={checkedEmails}
               showCheckbox={true}
+              healthResults={healthResults}
             />
           </SectionBox>
 

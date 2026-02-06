@@ -68,10 +68,17 @@
 - [x] **Progress Bars** - Visual indicator of rate limit status per model
 - [x] **Time Remaining** - Shows hours/minutes until limit resets
 
-### v0.5.2 - Loading Indicator (Current)
+### v0.5.2 - Loading Indicator
 - [x] **Loading State** - Shows progress during refresh
 - [x] **Step Messages** - "Loading OpenCode config...", "Loading accounts...", "Done!"
 - [x] **R Key Shortcut** - Added R to help bar for quick refresh
+
+### v0.6.4 - Account Health Check (Current)
+- [x] **Health Check Cache** - TTL + cooldown stored in ocam-config.json
+- [x] **OAuth Validation** - Refresh token check with status mapping
+- [x] **Log Hints** - Parse antigravity-logs for verification errors
+- [x] **Dashboard Badges** - Health indicator + summary counts
+- [x] **CLI Command** - `ocam check` with progress and warnings
 
 **Controls:**
 | Key | Action |
@@ -80,6 +87,7 @@
 | ↑↓ | Navigate accounts/sections |
 | Space | Toggle account selection |
 | R | Refresh with progress indicator |
+| H | Check account health |
 | P | Open Action Palette |
 | Q | Quit |
 
@@ -97,9 +105,9 @@
 - [ ] Multi-device sync
 - [ ] Conflict resolution
 
-### v0.7.0 - Account Health
-- [ ] Check if refresh tokens are still valid
+### v0.7.0 - Account Health (Follow-ups)
 - [ ] Auto-refresh expired tokens
+- [ ] Background health monitoring
 - [ ] Health check on startup
 
 ### v0.8.0 - MCP Management
@@ -117,6 +125,16 @@
 - [ ] Full documentation
 - [ ] Windows/Mac/Linux installers
 - [ ] Integration tests
+
+---
+
+## Manual Test Checklist (Health Check)
+
+- [ ] **Happy path**: OAuth config set, refresh token valid → status `ok`
+- [ ] **Invalid grant**: revoked/expired token → status `revoked` (or `password_changed` if error_description matches)
+- [ ] **Verification required**: trigger `verification_required` mapping via `invalid_grant` with verify/challenge text
+- [ ] **Network error**: disconnect network → status `network_error`
+- [ ] **Missing OAuth config**: no client_id/client_secret → status `not_configured`
 
 ---
 

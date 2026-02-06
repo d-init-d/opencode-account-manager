@@ -156,3 +156,49 @@ export type ImportFileType =
   | "am-export"      // Antigravity Manager app export
   | "plugin-native"  // antigravity-accounts.json format
   | "unknown";
+
+// ============================================================================
+// Account Health Types
+// ============================================================================
+
+export type AccountHealthStatus =
+  | "ok"
+  | "verification_required"
+  | "revoked"
+  | "disabled"
+  | "deleted"
+  | "password_changed"
+  | "network_error"
+  | "unknown_error"
+  | "not_checked"
+  | "not_configured";
+
+export type AccountHealthSource = "oauth" | "log" | "cache" | "manual";
+
+export interface AccountHealthResult {
+  status: AccountHealthStatus;
+  checkedAt: number;
+  source: AccountHealthSource;
+  message?: string;
+  errorCode?: string;
+  errorDescription?: string;
+  httpStatus?: number;
+}
+
+export interface HealthSettings {
+  ttlMs?: number;
+  cooldownMs?: number;
+  maxConcurrency?: number;
+}
+
+export interface HealthOAuthConfig {
+  clientId?: string;
+  clientSecret?: string;
+  tokenEndpoint?: string;
+}
+
+export interface HealthConfig {
+  settings?: HealthSettings;
+  oauth?: HealthOAuthConfig;
+  cache?: Record<string, AccountHealthResult>;
+}

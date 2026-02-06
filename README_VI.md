@@ -31,6 +31,7 @@
 - **Quản lý Accounts**: Quản lý các tài khoản Google đang kết nối với OpenCode
   - Trạng thái rate limit theo từng model (claude, gemini)
   - Bật/Tắt/Xóa accounts
+- **Health Check**: Kiểm tra refresh token và báo tài khoản cần xác minh
 - **Export mã hóa**: Mã hóa AES-256-GCM với mật khẩu bảo vệ
 - **Import đa định dạng**: Hỗ trợ file `.ocam` mã hóa, JSON thuần, và file export từ Antigravity Manager
 
@@ -109,8 +110,26 @@ ocam import backup.json
 # Import từ thư mục Antigravity Manager
 ocam import-am
 
+# Health check
+ocam check
+
+# Health check (chỉ định email)
+ocam check --emails user1@example.com,user2@example.com
+
+# Health check (bỏ qua cache)
+ocam check --force
+
 # Trợ giúp
 ocam --help
+```
+
+**Cấu hình OAuth cho Health Check**
+Thiết lập credentials qua biến môi trường:
+
+```
+OCAM_OAUTH_CLIENT_ID=...
+OCAM_OAUTH_CLIENT_SECRET=...
+OCAM_OAUTH_TOKEN_ENDPOINT=https://oauth2.googleapis.com/token
 ```
 
 ---

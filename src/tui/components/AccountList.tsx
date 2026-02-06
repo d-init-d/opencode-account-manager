@@ -1,13 +1,16 @@
 import React from "react";
 import { Box, Text } from "ink";
 import { StatusBadge } from "./StatusBadge";
-import { Account } from "../../core/types";
+import { HealthBadge } from "./HealthBadge";
+import { Account, AccountHealthResult } from "../../core/types";
+import { normalizeHealthKey } from "../../core/config-store";
 
 interface AccountRowProps {
   account: Account;
   isSelected?: boolean;
   isChecked?: boolean;
   showCheckbox?: boolean;
+  healthResult?: AccountHealthResult;
 }
 
 function formatDuration(ms: number): string {
@@ -51,7 +54,13 @@ function getAccountStatus(account: Account): {
   };
 }
 
-export function AccountRow({ account, isSelected, isChecked, showCheckbox }: AccountRowProps) {
+export function AccountRow({
+  account,
+  isSelected,
+  isChecked,
+  showCheckbox,
+  healthResult,
+}: AccountRowProps) {
   const { status, resetIn, limitDetails } = getAccountStatus(account);
   const project = account.projectId || account.managedProjectId || "-";
 
@@ -85,6 +94,9 @@ export function AccountRow({ account, isSelected, isChecked, showCheckbox }: Acc
           <StatusBadge status={status} />
         </Box>
         <Box width={10}>
+          <HealthBadge result={healthResult} />
+        </Box>
+        <Box width={10}>
           <Text dimColor>{resetIn}</Text>
         </Box>
       </Box>
@@ -104,13 +116,15 @@ interface AccountListProps {
   selectedIndex?: number;
   checkedEmails?: Set<string>;
   showCheckbox?: boolean;
+  healthResults?: Record<string, AccountHealthResult>;
 }
 
 export function AccountList({ 
   accounts, 
   selectedIndex = -1, 
   checkedEmails = new Set(),
-  showCheckbox = false 
+  showCheckbox = false,
+  healthResults
 }: AccountListProps) {
   return (
     <Box flexDirection="column">
@@ -133,6 +147,9 @@ export function AccountList({
           <Text bold dimColor>STATUS</Text>
         </Box>
         <Box width={10}>
+          <Text bold dimColor>HEALTH</Text>
+        </Box>
+        <Box width={10}>
           <Text bold dimColor>RESET IN</Text>
         </Box>
       </Box>
@@ -143,6 +160,7 @@ export function AccountList({
           isSelected={index === selectedIndex}
           isChecked={checkedEmails.has(account.email)}
           showCheckbox={showCheckbox}
+          healthResult={healthResults?.[normalizeHealthKey(account.email)]}
         />
       ))}
       {accounts.length === 0 && (

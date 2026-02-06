@@ -16,11 +16,71 @@ import { getPluginAccountsPath, getAmFolderPath } from "./core/paths";
 import { importFromAmFolder, isAmFolder } from "./core/importers/amJson";
 import { writeJsonFile } from "./core/utils";
 import { startTuiDashboard } from "./tui";
+import { checkAccountsHealth, HealthCheckResult } from "./core/health-orchestrator";
+import { AccountHealthStatus } from "./core/types";
 
 function formatTimestamp(timestamp?: number): string {
   if (!timestamp) return "-";
   return new Date(timestamp).toLocaleString();
 }
+
+function getStatusLabel(status: AccountHealthStatus): string {
+  switch (status) {
+    case "verification_required":
+      return chalk.bgYellow.black(" VERIFY ");
+    case "revoked":
+      return chalk.bgRed.white(" REVOKED ");
+    case "disabled":
+      return chalk.bgRed.white(" DISABLED ");
+    case "deleted":
+      return chalk.bgRed.white(" DELETED ");
+    case "password_changed":
+      return chalk.bgYellow.black(" PASSWD ");
+    case "network_error":
+      return chalk.bgBlue.white(" NETWORK ");
+    case "unknown_error":
+      return chalk.bgRed.white(" ERROR ");
+    case "not_configured":
+      return chalk.bgGray.white(" CONFIG ");
+    default:
+      return chalk.bgGray.white(` ${status.toUpperCase()} `);
+  }
+}
+
+function printHealthCheckResult(result: HealthCheckResult) {
+  const { counts, timing, items } = result;
+  const issues =
+    counts.total -
+    counts.byStatus.ok -
+    (counts.byStatus.not_checked || 0);
+
+  console.log(chalk.bold("\n=== Health Check Summary ==="));
+  console.log(
+    `Total: ${counts.total} | ` +
+      `${chalk.green("OK: " + counts.byStatus.ok)} | ` +
+      `${
+        issues > 0 ? chalk.red("Issues: " + issues) : chalk.gray("Issues: 0")
+      } | ` +
+      `Time: ${(timing.durationMs / 1000).toFixed(1)}s\n`
+  );
+
+  const warnings = items.filter(
+    (item) => item.result.status !== "ok" && item.result.status !== "not_checked"
+  );
+
+  if (warnings.length > 0) {
+    console.log(chalk.bold("Warnings:"));
+    for (const item of warnings) {
+      const label = getStatusLabel(item.result.status);
+      const msg = item.result.message || item.result.status;
+      console.log(`${label} ${item.email} ${chalk.gray(`(${msg})`)}`);
+    }
+    console.log("");
+  } else if (counts.total > 0) {
+    console.log(chalk.green("All accounts are healthy.\n"));
+  }
+}
+
 
 function isLimited(rateLimitResetTimes?: Record<string, number>): boolean {
   if (!rateLimitResetTimes) return false;
@@ -34,6 +94,15 @@ function safeReadPluginFile(pluginPath: string) {
   } catch {
     return createEmptyPluginAccountsFile();
   }
+}
+
+function parseEmailList(input?: string): string[] | undefined {
+  if (!input) return undefined;
+  const items = input
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+  return items.length > 0 ? items : undefined;
 }
 
 const program = new Command();
@@ -81,6 +150,38 @@ program
         }
       }
     }
+  });
+
+program
+  .command("check")
+  .description("Check account health status")
+  .option("--plugin-path <path>", "Path to plugin accounts file")
+  .option("--emails <emails>", "Comma-separated list of emails to check")
+  .option("--force", "Bypass cache and cooldown checks", false)
+  .action(async (options) => {
+    const pluginPath = getPluginAccountsPath(options.pluginPath);
+    const file = safeReadPluginFile(pluginPath);
+    const emails = parseEmailList(options.emails);
+
+    if (file.accounts.length === 0) {
+      console.log(chalk.yellow("No accounts to check."));
+      return;
+    }
+
+    const result = await checkAccountsHealth(file.accounts, {
+      emails,
+      force: options.force === true,
+      includeLogs: true,
+      onProgress: (current, total, message) => {
+        if (total > 0) {
+          process.stdout.write(`\r${chalk.gray(`[${current}/${total}]`)} ${message}   `);
+        }
+      },
+    });
+
+    process.stdout.write("\n");
+
+    printHealthCheckResult(result);
   });
 
 program

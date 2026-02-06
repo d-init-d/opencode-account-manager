@@ -31,6 +31,7 @@
 - **Plugin Accounts**: Manage Google accounts connected to OpenCode
   - Rate limit status per model (claude, gemini)
   - Enable/Disable/Delete accounts
+- **Account Health Check**: Validate refresh tokens and flag verification required
 - **Encrypted Export**: AES-256-GCM encryption with password protection
 - **Multi-format Import**: Support for encrypted `.ocam`, plain JSON, and Antigravity Manager exports
 
@@ -109,8 +110,26 @@ ocam import backup.json
 # Import from Antigravity Manager folder
 ocam import-am
 
+# Health check
+ocam check
+
+# Health check (specific emails)
+ocam check --emails user1@example.com,user2@example.com
+
+# Health check (bypass cache)
+ocam check --force
+
 # Help
 ocam --help
+```
+
+**Health Check OAuth Config**
+Set OAuth client credentials via environment variables:
+
+```
+OCAM_OAUTH_CLIENT_ID=...
+OCAM_OAUTH_CLIENT_SECRET=...
+OCAM_OAUTH_TOKEN_ENDPOINT=https://oauth2.googleapis.com/token
 ```
 
 ---

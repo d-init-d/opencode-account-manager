@@ -1,11 +1,15 @@
 import React from "react";
 import { Box, Text } from "ink";
-import { Account } from "../../core/types";
+import { Account, AccountHealthResult } from "../../core/types";
+import { normalizeHealthKey } from "../../core/config-store";
+import { HealthBadge } from "./HealthBadge";
 
 interface DashboardViewProps {
   accounts: Account[];
   selectedIndex: number;
+  healthResults?: Record<string, AccountHealthResult>;
 }
+
 
 interface ModelConfig {
   key: string;
@@ -179,7 +183,7 @@ function ModelCell({ status, width = 20 }: { status: ModelStatus; width?: number
   );
 }
 
-export function DashboardView({ accounts, selectedIndex }: DashboardViewProps) {
+export function DashboardView({ accounts, selectedIndex, healthResults }: DashboardViewProps) {
   if (accounts.length === 0) {
     return (
       <Box flexDirection="column" paddingX={1}>
@@ -192,8 +196,32 @@ export function DashboardView({ accounts, selectedIndex }: DashboardViewProps) {
   const displayModels = getDisplayModels(accounts);
   const modelColumnWidth = 20;
   const emailWidth = 28;
+  const healthWidth = 2;
   const lastUsedWidth = 14;
-  const totalWidth = 3 + emailWidth + displayModels.length * modelColumnWidth + lastUsedWidth;
+  const totalWidth = 3 + emailWidth + healthWidth + displayModels.length * modelColumnWidth + lastUsedWidth;
+
+  const healthCounts = healthResults
+    ? accounts.reduce(
+        (acc, account) => {
+          const status = healthResults[normalizeHealthKey(account.email)]?.status || "not_checked";
+          if (status === "ok") acc.ok += 1;
+          if (status === "verification_required") acc.verify += 1;
+          if (status === "not_checked" || status === "not_configured") acc.unchecked += 1;
+          if (
+            status === "revoked" ||
+            status === "disabled" ||
+            status === "deleted" ||
+            status === "password_changed" ||
+            status === "unknown_error" ||
+            status === "network_error"
+          ) {
+            acc.errors += 1;
+          }
+          return acc;
+        },
+        { ok: 0, verify: 0, errors: 0, unchecked: 0 }
+      )
+    : null;
 
   return (
     <Box flexDirection="column">
@@ -204,6 +232,9 @@ export function DashboardView({ accounts, selectedIndex }: DashboardViewProps) {
         </Box>
         <Box width={emailWidth}>
           <Text dimColor bold>EMAIL</Text>
+        </Box>
+        <Box width={healthWidth}>
+          <Text dimColor bold>H</Text>
         </Box>
         {displayModels.map(model => (
           <Box key={model.key} width={modelColumnWidth}>
@@ -230,6 +261,8 @@ export function DashboardView({ accounts, selectedIndex }: DashboardViewProps) {
           ? account.email.slice(0, emailWidth - 6) + "..." 
           : account.email;
 
+        const health = healthResults?.[normalizeHealthKey(account.email)];
+
         return (
           <Box key={account.email} paddingX={1}>
             {/* Selection cursor */}
@@ -248,8 +281,14 @@ export function DashboardView({ accounts, selectedIndex }: DashboardViewProps) {
                 {email}
               </Text>
             </Box>
+
+            {/* Health indicator */}
+            <Box width={healthWidth}>
+              <HealthBadge result={health} compact={true} />
+            </Box>
             
             {/* Model columns */}
+
             {displayModels.map(model => {
               const status = getModelStatus(account, model.key);
               
@@ -308,13 +347,29 @@ export function DashboardView({ accounts, selectedIndex }: DashboardViewProps) {
         <Text dimColor>
           {accounts.filter(a => a.enabled === false).length} disabled
         </Text>
+        {healthCounts && (
+          <>
+            <Text dimColor> │ </Text>
+            <Text color="yellow">{healthCounts.verify}</Text>
+            <Text dimColor> need verify</Text>
+            <Text dimColor> │ </Text>
+            <Text color="red">{healthCounts.errors}</Text>
+            <Text dimColor> errors</Text>
+            <Text dimColor> │ </Text>
+            <Text dimColor>{healthCounts.unchecked} unchecked</Text>
+          </>
+        )}
       </Box>
 
       {/* Legend */}
       <Box paddingX={1} marginTop={1}>
         <Text dimColor>████ 100%</Text>
         <Text dimColor>  ░░░░ limited  </Text>
-        <Text dimColor>── disabled</Text>
+        <Text dimColor>── disabled  </Text>
+        <Text color="green">✓</Text><Text dimColor> ok  </Text>
+        <Text color="yellow">⚠</Text><Text dimColor> verify  </Text>
+        <Text color="red">✘</Text><Text dimColor> error  </Text>
+        <Text dimColor>· unchecked</Text>
       </Box>
     </Box>
   );

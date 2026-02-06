@@ -30,3 +30,7 @@ export function getAmDbPath(customPath?: string): string {
   }
   return path.join(getConfigRoot(), "antigravity-manager", "accounts.db");
 }
+
+export function getAntigravityLogsPath(): string {
+  return path.join(getConfigRoot(), "opencode", "antigravity-logs");
+}

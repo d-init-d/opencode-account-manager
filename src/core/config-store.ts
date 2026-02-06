@@ -1,6 +1,13 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import {
+  AccountHealthResult,
+  HealthConfig,
+  HealthOAuthConfig,
+  HealthSettings,
+} from "./types";
+import { toLowerTrim } from "./utils";
 
 // ============================================================================
 // Types
@@ -11,6 +18,7 @@ export interface AppConfig {
   lastImportFolder?: string;
   defaultExportFormat?: "encrypted" | "plain";
   recentFolders?: string[];
+  health?: HealthConfig;
 }
 
 // ============================================================================
@@ -19,6 +27,9 @@ export interface AppConfig {
 
 const CONFIG_FILENAME = "ocam-config.json";
 const MAX_RECENT_FOLDERS = 5;
+const DEFAULT_HEALTH_TTL_MS = 10 * 60 * 1000;
+const DEFAULT_HEALTH_COOLDOWN_MS = 60 * 1000;
+const DEFAULT_HEALTH_MAX_CONCURRENCY = 3;
 
 // ============================================================================
 // Path Functions
@@ -122,6 +133,102 @@ export function getLastExportFolder(): string {
 export function getLastImportFolder(): string {
   const config = readConfig();
   return config.lastImportFolder || process.cwd();
+}
+
+// ============================================================================
+// Health Config & Cache
+// ============================================================================
+
+export function normalizeHealthKey(email: string): string {
+  return toLowerTrim(email);
+}
+
+export function getHealthSettings(): Required<HealthSettings> {
+  const config = readConfig();
+  const settings = config.health?.settings || {};
+  return {
+    ttlMs: settings.ttlMs ?? DEFAULT_HEALTH_TTL_MS,
+    cooldownMs: settings.cooldownMs ?? DEFAULT_HEALTH_COOLDOWN_MS,
+    maxConcurrency: settings.maxConcurrency ?? DEFAULT_HEALTH_MAX_CONCURRENCY,
+  };
+}
+
+export function updateHealthSettings(partial: HealthSettings): void {
+  const config = readConfig();
+  const health = config.health || {};
+  const settings = { ...(health.settings || {}), ...partial };
+  writeConfig({
+    ...config,
+    health: { ...health, settings },
+  });
+}
+
+export function getHealthOAuthConfig(): HealthOAuthConfig | undefined {
+  const config = readConfig();
+  return config.health?.oauth;
+}
+
+export function updateHealthOAuthConfig(partial: HealthOAuthConfig): void {
+  const config = readConfig();
+  const health = config.health || {};
+  const oauth = { ...(health.oauth || {}), ...partial };
+  writeConfig({
+    ...config,
+    health: { ...health, oauth },
+  });
+}
+
+export function getHealthCache(): Record<string, AccountHealthResult> {
+  const config = readConfig();
+  return config.health?.cache ? { ...config.health.cache } : {};
+}
+
+export function getCachedHealth(
+  email: string,
+  ttlMs?: number
+): AccountHealthResult | undefined {
+  const key = normalizeHealthKey(email);
+  const cache = getHealthCache();
+  const entry = cache[key];
+  if (!entry) return undefined;
+  const ttl = ttlMs ?? getHealthSettings().ttlMs;
+  if (Date.now() - entry.checkedAt > ttl) return undefined;
+  return entry;
+}
+
+export function setHealthCacheEntry(email: string, result: AccountHealthResult): void {
+  const key = normalizeHealthKey(email);
+  const config = readConfig();
+  const health: HealthConfig = config.health || {};
+  const cache = { ...(health.cache || {}) };
+  cache[key] = result;
+  writeConfig({
+    ...config,
+    health: { ...health, cache },
+  });
+}
+
+export function removeHealthCacheEntry(email: string): void {
+  const key = normalizeHealthKey(email);
+  const config = readConfig();
+  const health: HealthConfig = config.health || {};
+  const cache = { ...(health.cache || {}) };
+  if (cache[key]) {
+    delete cache[key];
+    writeConfig({
+      ...config,
+      health: { ...health, cache },
+    });
+  }
+}
+
+export function clearHealthCache(): void {
+  const config = readConfig();
+  const health: HealthConfig = config.health || {};
+  writeConfig({
+    ...config,
+    health: { ...health, cache: {} },
+  });
 }
 
 // ============================================================================
