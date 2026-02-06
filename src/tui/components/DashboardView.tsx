@@ -201,10 +201,9 @@ export function DashboardView({ accounts, selectedIndex, healthResults }: Dashbo
   const modelColumnWidth = 20;
   const healthWidth = 2;
   const lastUsedWidth = 14;
-  const scrollbarWidth = 1;
 
   const innerWidth = Math.max(60, terminalColumns - 6);
-  const baseWidth = 3 + healthWidth + lastUsedWidth + scrollbarWidth;
+  const baseWidth = 3 + healthWidth + lastUsedWidth;
   const maxEmailWidth = Math.min(28, Math.max(12, innerWidth - baseWidth - modelColumnWidth));
   const emailWidth = maxEmailWidth;
   const remainingWidth = innerWidth - baseWidth - emailWidth;
@@ -222,14 +221,6 @@ export function DashboardView({ accounts, selectedIndex, healthResults }: Dashbo
     ...Array.from({ length: Math.max(0, visibleRows - visibleAccounts.length) }, () => undefined),
   ];
 
-  const showScrollbar = accounts.length > visibleRows;
-  const thumbSize = showScrollbar
-    ? Math.max(1, Math.round((visibleRows * visibleRows) / accounts.length))
-    : 0;
-  const maxThumbTop = Math.max(0, visibleRows - thumbSize);
-  const thumbTop = showScrollbar && maxOffset > 0
-    ? Math.round((scrollOffset / maxOffset) * maxThumbTop)
-    : 0;
 
   const healthCounts = healthResults
     ? accounts.reduce(
@@ -275,9 +266,6 @@ export function DashboardView({ accounts, selectedIndex, healthResults }: Dashbo
         <Box width={lastUsedWidth}>
           <Text dimColor bold>LAST USED</Text>
         </Box>
-        <Box width={scrollbarWidth}>
-          <Text dimColor>|</Text>
-        </Box>
       </Box>
 
       {/* Separator */}
@@ -298,9 +286,6 @@ export function DashboardView({ accounts, selectedIndex, healthResults }: Dashbo
           : "";
 
         const health = account ? healthResults?.[normalizeHealthKey(account.email)] : undefined;
-        const scrollbarChar = showScrollbar
-          ? (index >= thumbTop && index < thumbTop + thumbSize ? "#" : "|")
-          : " ";
 
         return (
           <Box key={account ? account.email : `empty-${index}`} paddingX={1}>
@@ -356,9 +341,6 @@ export function DashboardView({ accounts, selectedIndex, healthResults }: Dashbo
             })}
             <Box width={lastUsedWidth}>
               <Text dimColor>{account ? formatLastUsed(account.lastUsed) : ""}</Text>
-            </Box>
-            <Box width={scrollbarWidth}>
-              <Text dimColor={showScrollbar}>{scrollbarChar}</Text>
             </Box>
           </Box>
         );
